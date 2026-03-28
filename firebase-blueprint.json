@@ -1,0 +1,173 @@
+{
+  "entities": {
+    "Settings": {
+      "title": "Settings",
+      "description": "Company profile and app settings",
+      "type": "object",
+      "properties": {
+        "companyName": { "type": "string" },
+        "address": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "lowStockThreshold": { "type": "number" }
+      },
+      "required": ["companyName", "address", "phone", "email", "lowStockThreshold"]
+    },
+    "BTCItem": {
+      "title": "BTCItem",
+      "description": "Inventory item following Bhutan Tariff Schedule",
+      "type": "object",
+      "properties": {
+        "n": { "type": "string" },
+        "btc": { "type": "string" },
+        "u": { "type": "string" },
+        "qty": { "type": "number" },
+        "p": { "type": "number" },
+        "cd": { "type": "number" },
+        "st": { "type": "number" },
+        "sup": { "type": "string" }
+      },
+      "required": ["n", "btc", "u", "qty", "p", "cd", "st", "sup"]
+    },
+    "Customer": {
+      "title": "Customer",
+      "description": "Customer profile and eye power history",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "phone": { "type": "string" },
+        "address": { "type": "string" },
+        "powerL": { "type": "string" },
+        "powerR": { "type": "string" },
+        "email": { "type": "string" },
+        "lastVisit": { "type": "string" }
+      },
+      "required": ["id", "name", "phone"]
+    },
+    "Invoice": {
+      "title": "Invoice",
+      "description": "Sales invoice record",
+      "type": "object",
+      "properties": {
+        "num": { "type": "string" },
+        "date": { "type": "string" },
+        "day": { "type": "string" },
+        "customer": { "type": "string" },
+        "addr": { "type": "string" },
+        "due": { "type": "string" },
+        "status": { "type": "string", "enum": ["Unpaid", "Paid", "Partial"] },
+        "method": { "type": "string" },
+        "lines": { "type": "array", "items": { "type": "object" } },
+        "sub": { "type": "number" },
+        "disc": { "type": "number" },
+        "tax": { "type": "number" },
+        "grand": { "type": "number" },
+        "paid": { "type": "number" }
+      },
+      "required": ["num", "date", "day", "customer", "status", "grand"]
+    },
+    "Purchase": {
+      "title": "Purchase",
+      "description": "Purchase record",
+      "type": "object",
+      "properties": {
+        "num": { "type": "string" },
+        "date": { "type": "string" },
+        "day": { "type": "string" },
+        "supplier": { "type": "string" },
+        "status": { "type": "string", "enum": ["Unpaid", "Paid", "Partial"] },
+        "method": { "type": "string" },
+        "ref": { "type": "string" },
+        "items": { "type": "array", "items": { "type": "object" } },
+        "val": { "type": "number" },
+        "cd": { "type": "number" },
+        "st": { "type": "number" },
+        "grand": { "type": "number" }
+      },
+      "required": ["num", "date", "day", "supplier", "status", "grand"]
+    },
+    "Voucher": {
+      "title": "Voucher",
+      "description": "Receipt or Payment voucher",
+      "type": "object",
+      "properties": {
+        "num": { "type": "string" },
+        "date": { "type": "string" },
+        "day": { "type": "string" },
+        "party": { "type": "string" },
+        "acct": { "type": "string" },
+        "amount": { "type": "number" },
+        "method": { "type": "string" },
+        "desc": { "type": "string" },
+        "type": { "type": "string", "enum": ["Receipt", "Payment"] }
+      },
+      "required": ["num", "date", "day", "party", "amount", "type"]
+    },
+    "POSSale": {
+      "title": "POSSale",
+      "description": "POS transaction record",
+      "type": "object",
+      "properties": {
+        "num": { "type": "string" },
+        "date": { "type": "string" },
+        "day": { "type": "string" },
+        "customer": { "type": "string" },
+        "item": { "type": "string" },
+        "lines": { "type": "array", "items": { "type": "object" } },
+        "method": { "type": "string" },
+        "net": { "type": "number" },
+        "tax": { "type": "number" },
+        "total": { "type": "number" }
+      },
+      "required": ["num", "date", "day", "total"]
+    },
+    "Counters": {
+      "title": "Counters",
+      "description": "Auto-incrementing counters for document numbers",
+      "type": "object",
+      "properties": {
+        "inv": { "type": "integer" },
+        "pur": { "type": "integer" },
+        "rec": { "type": "integer" },
+        "pay": { "type": "integer" },
+        "pos": { "type": "integer" }
+      },
+      "required": ["inv", "pur", "rec", "pay", "pos"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/config/settings": {
+      "schema": "Settings",
+      "description": "User specific settings"
+    },
+    "/users/{userId}/config/counters": {
+      "schema": "Counters",
+      "description": "User specific counters"
+    },
+    "/users/{userId}/items/{itemId}": {
+      "schema": "BTCItem",
+      "description": "Inventory items for the user"
+    },
+    "/users/{userId}/invoices/{invoiceId}": {
+      "schema": "Invoice",
+      "description": "Sales invoices for the user"
+    },
+    "/users/{userId}/purchases/{purchaseId}": {
+      "schema": "Purchase",
+      "description": "Purchase records for the user"
+    },
+    "/users/{userId}/vouchers/{voucherId}": {
+      "schema": "Voucher",
+      "description": "Receipt and payment vouchers for the user"
+    },
+    "/users/{userId}/posSales/{posSaleId}": {
+      "schema": "POSSale",
+      "description": "POS sales for the user"
+    },
+    "/users/{userId}/customers/{customerId}": {
+      "schema": "Customer",
+      "description": "Customer profiles for the user"
+    }
+  }
+}

@@ -1,0 +1,208 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: /users/{userId}/config/settings
+    // Fields: companyName, address, phone, email, lowStockThreshold
+    //
+    // Collection: /users/{userId}/config/counters
+    // Fields: inv, pur, rec, pay, pos
+    //
+    // Collection: /users/{userId}/items/{itemId}
+    // Fields: n, btc, u, qty, p, cd, st, sup
+    //
+    // Collection: /users/{userId}/customers/{customerId}
+    // Fields: id, name, phone, address, powerL, powerR, email, lastVisit
+    //
+    // Collection: /users/{userId}/invoices/{invoiceId}
+    // Fields: num, date, day, customer, addr, due, status, method, lines, sub, disc, tax, grand, paid
+    //
+    // Collection: /users/{userId}/purchases/{purchaseId}
+    // Fields: num, date, day, supplier, status, method, ref, items, val, cd, st, grand
+    //
+    // Collection: /users/{userId}/vouchers/{voucherId}
+    // Fields: num, date, day, party, acct, amount, method, desc, type
+    //
+    // Collection: /users/{userId}/posSales/{posSaleId}
+    // Fields: num, date, day, customer, item, lines, method, net, tax, total
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && (
+        (request.auth.token.email == "dagacooperative2022@gmail.com" && request.auth.token.email_verified == true) ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', 'user') == 'admin')
+      );
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidSettings(data) {
+      return hasRequiredFields(['companyName', 'address', 'phone', 'email', 'lowStockThreshold']) &&
+             data.companyName is string && data.companyName.size() > 0 && data.companyName.size() < 100 &&
+             data.address is string && data.address.size() < 500 &&
+             data.phone is string && data.phone.size() < 20 &&
+             isValidEmail(data.email) &&
+             data.lowStockThreshold is number && data.lowStockThreshold >= 0;
+    }
+
+    function isValidItem(data) {
+      return hasRequiredFields(['n', 'btc', 'u', 'qty', 'p', 'cd', 'st', 'sup']) &&
+             data.n is string && data.n.size() > 0 && data.n.size() < 200 &&
+             data.btc is string && data.btc.size() < 20 &&
+             data.u is string &&
+             data.qty is number &&
+             data.p is number && data.p >= 0 &&
+             data.cd is number && data.cd >= 0 &&
+             data.st is number && data.st >= 0 &&
+             data.sup is string;
+    }
+
+    function isValidCustomer(data) {
+      return hasRequiredFields(['id', 'name', 'phone']) &&
+             data.id is string &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.phone is string && data.phone.size() >= 0 && data.phone.size() < 20 &&
+             (!('email' in data) || isValidEmail(data.email)) &&
+             (!('address' in data) || (data.address is string && data.address.size() < 500)) &&
+             (!('powerL' in data) || (data.powerL is string && data.powerL.size() < 100)) &&
+             (!('powerR' in data) || (data.powerR is string && data.powerR.size() < 100)) &&
+             (!('lastVisit' in data) || (data.lastVisit is string));
+    }
+
+    function isValidInvoice(data) {
+      return hasRequiredFields(['num', 'date', 'day', 'customer', 'status', 'grand']) &&
+             data.num is string &&
+             data.date is string &&
+             data.customer is string &&
+             data.status in ['Unpaid', 'Paid', 'Partial'] &&
+             data.grand is number && data.grand >= 0;
+    }
+
+    function isValidPurchase(data) {
+      return hasRequiredFields(['num', 'date', 'day', 'supplier', 'status', 'grand']) &&
+             data.num is string &&
+             data.date is string &&
+             data.supplier is string &&
+             data.status in ['Unpaid', 'Paid', 'Partial'] &&
+             data.grand is number && data.grand >= 0;
+    }
+
+    function isValidVoucher(data) {
+      return hasRequiredFields(['num', 'date', 'day', 'party', 'amount', 'type']) &&
+             data.num is string &&
+             data.date is string &&
+             data.party is string &&
+             data.amount is number && data.amount >= 0 &&
+             data.type in ['Receipt', 'Payment'];
+    }
+
+    function isValidPOSSale(data) {
+      return hasRequiredFields(['num', 'date', 'day', 'total']) &&
+             data.num is string &&
+             data.date is string &&
+             data.total is number && data.total >= 0;
+    }
+
+    function isValidCounters(data) {
+      return hasRequiredFields(['inv', 'pur', 'rec', 'pay', 'pos']) &&
+             data.inv is int && data.inv >= 0 &&
+             data.pur is int && data.pur >= 0 &&
+             data.rec is int && data.rec >= 0 &&
+             data.pay is int && data.pay >= 0 &&
+             data.pos is int && data.pos >= 0;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read, write: if isOwner(userId) || isAdmin();
+
+      match /{allPaths=**} {
+        allow read: if isOwner(userId) || isAdmin();
+      }
+
+      match /config/settings {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create, update: if (isOwner(userId) || isAdmin()) && isValidSettings(request.resource.data);
+      }
+
+      match /config/counters {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create, update: if (isOwner(userId) || isAdmin()) && isValidCounters(request.resource.data);
+      }
+
+      match /items/{itemId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create, update: if (isOwner(userId) || isAdmin()) && isValidItem(request.resource.data);
+        allow delete: if isOwner(userId) || isAdmin();
+      }
+
+      match /invoices/{invoiceId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create, update: if (isOwner(userId) || isAdmin()) && isValidInvoice(request.resource.data);
+        allow delete: if isOwner(userId) || isAdmin();
+      }
+
+      match /purchases/{purchaseId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create, update: if (isOwner(userId) || isAdmin()) && isValidPurchase(request.resource.data);
+        allow delete: if isOwner(userId) || isAdmin();
+      }
+
+      match /vouchers/{voucherId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create, update: if (isOwner(userId) || isAdmin()) && isValidVoucher(request.resource.data);
+        allow delete: if isOwner(userId) || isAdmin();
+      }
+
+      match /posSales/{posSaleId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create, update: if (isOwner(userId) || isAdmin()) && isValidPOSSale(request.resource.data);
+        allow delete: if isOwner(userId) || isAdmin();
+      }
+
+      match /customers/{customerId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create, update: if (isOwner(userId) || isAdmin()) && isValidCustomer(request.resource.data);
+        allow delete: if isOwner(userId) || isAdmin();
+      }
+    }
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
