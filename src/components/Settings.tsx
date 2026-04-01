@@ -7,9 +7,10 @@ interface SettingsProps {
   state: AppState;
   onSave: (settings: SettingsType) => void;
   onResetInventory: () => void;
+  showNotification: (msg: string, type?: 'success' | 'error') => void;
 }
 
-const Settings: React.FC<SettingsProps> = ({ state, onSave, onResetInventory }) => {
+const Settings: React.FC<SettingsProps> = ({ state, onSave, onResetInventory, showNotification }) => {
   const [settings, setSettings] = useState<SettingsType>(state.settings);
 
   const handleReset = () => {
@@ -53,9 +54,9 @@ const Settings: React.FC<SettingsProps> = ({ state, onSave, onResetInventory }) 
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <div className="flex items-center gap-3 bg-orange-50/50 border-2 border-orange-primary/20 rounded-full px-4 py-1.5 w-fit">
+      <div className="flex items-center gap-3 bg-[rgba(255,247,237,0.5)] border-2 border-[rgba(249,115,22,0.2)] rounded-full px-4 py-1.5 w-fit">
         <span className="text-[11px] font-extrabold text-orange-primary uppercase tracking-widest">⚙️ Business Settings</span>
-        <span className="w-1 h-1 rounded-full bg-orange-primary/30"></span>
+        <span className="w-1 h-1 rounded-full bg-[rgba(249,115,22,0.3)]"></span>
         <span className="text-[11px] font-extrabold text-slate-500 uppercase tracking-widest">Configure Company Details</span>
       </div>
 
@@ -109,7 +110,7 @@ const Settings: React.FC<SettingsProps> = ({ state, onSave, onResetInventory }) 
                     </button>
                   </div>
                 ) : (
-                  <label className="flex flex-col items-center justify-center w-32 h-20 border-2 border-dashed border-slate-200 rounded-2xl hover:border-orange-primary/50 hover:bg-orange-50/30 cursor-pointer transition-all group">
+                  <label className="flex flex-col items-center justify-center w-32 h-20 border-2 border-dashed border-slate-200 rounded-2xl hover:border-[rgba(249,115,22,0.5)] hover:bg-[rgba(255,247,237,0.3)] cursor-pointer transition-all group">
                     <Upload size={20} className="text-slate-400 group-hover:text-orange-primary mb-1" />
                     <span className="text-[9px] font-bold text-slate-400 group-hover:text-orange-primary uppercase">Upload Logo</span>
                     <input type="file" className="hidden" accept="image/*" onChange={handleLogoUpload} />
@@ -183,7 +184,7 @@ const Settings: React.FC<SettingsProps> = ({ state, onSave, onResetInventory }) 
                 </p>
               </div>
 
-              <div className="p-4 bg-red-50/50 border-2 border-red-500/10 rounded-2xl space-y-3 max-w-sm dark:bg-red-950/20 dark:border-red-900/20">
+              <div className="p-4 bg-[rgba(254,242,242,0.5)] border-2 border-[rgba(239,68,68,0.1)] rounded-2xl space-y-3 max-w-sm dark:bg-[rgba(69,10,10,0.2)] dark:border-[rgba(127,29,29,0.2)]">
                 <div className="flex items-center gap-2 text-red-600 dark:text-red-400">
                   <AlertTriangle size={16} />
                   <span className="text-[10px] font-extrabold uppercase tracking-widest">Danger Zone</span>
@@ -208,7 +209,7 @@ const Settings: React.FC<SettingsProps> = ({ state, onSave, onResetInventory }) 
               Appearance & Theme
             </h3>
 
-            <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border-2 border-slate-100 dark:border-slate-800">
+            <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-[rgba(30,41,59,0.5)] rounded-2xl border-2 border-slate-100 dark:border-slate-800">
               <div className="space-y-1">
                 <p className="text-xs font-black text-slate-900 dark:text-slate-100 uppercase tracking-wider">Interface Theme</p>
                 <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Switch between light and dark mode for the application.</p>

@@ -9,9 +9,10 @@ interface PurchaseFormProps {
   onSave: (purchase: any, print?: boolean) => void;
   onCancel: () => void;
   initialData?: any;
+  showNotification: (msg: string, type?: 'success' | 'error') => void;
 }
 
-const PurchaseForm: React.FC<PurchaseFormProps> = ({ state, onSave, onCancel, initialData }) => {
+const PurchaseForm: React.FC<PurchaseFormProps> = ({ state, onSave, onCancel, initialData, showNotification }) => {
   const nextNum = initialData ? initialData.num : formatDocNum('pur', state.counters.pur);
   const [date, setDate] = useState(initialData?.date || today());
   const [supplier, setSupplier] = useState(initialData?.supplier || '');
@@ -144,7 +145,7 @@ const PurchaseForm: React.FC<PurchaseFormProps> = ({ state, onSave, onCancel, in
   const handleSave = (print = false) => {
     const validItems = items.filter(i => i.btc.trim() !== '');
     if (validItems.length === 0) {
-      alert('Please add at least one item with a valid BTC code.');
+      showNotification('Please add at least one item with a valid BTC code.', 'error');
       return;
     }
 
@@ -171,16 +172,16 @@ const PurchaseForm: React.FC<PurchaseFormProps> = ({ state, onSave, onCancel, in
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3 bg-orange-50/50 border-2 border-orange-primary/20 rounded-full px-4 py-1.5 w-fit">
+      <div className="flex items-center gap-3 bg-[#fff7ed] border-2 border-[rgba(249,115,22,0.2)] rounded-full px-4 py-1.5 w-fit">
         <span className="text-[11px] font-extrabold text-orange-primary uppercase tracking-widest">🛒 {initialData ? 'Edit Purchase' : 'New Purchase'}</span>
-        <span className="w-1 h-1 rounded-full bg-orange-primary/30"></span>
+        <span className="w-1 h-1 rounded-full bg-[rgba(249,115,22,0.3)]"></span>
         <span className="text-[11px] font-extrabold text-slate-500 uppercase tracking-widest">{initialData ? 'Editing' : 'Next'}: <strong>{nextNum}</strong></span>
       </div>
 
       {draftToRestore && (
-        <div className="bg-orange-50 border-2 border-orange-primary/20 rounded-xl p-4 flex items-center justify-between gap-4">
+        <div className="bg-[#fff7ed] border-2 border-[rgba(249,115,22,0.2)] rounded-xl p-4 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-orange-primary/10 flex items-center justify-center text-orange-primary">
+            <div className="w-8 h-8 rounded-full bg-[rgba(249,115,22,0.1)] flex items-center justify-center text-orange-primary">
               <Save size={16} />
             </div>
             <div>
@@ -200,13 +201,13 @@ const PurchaseForm: React.FC<PurchaseFormProps> = ({ state, onSave, onCancel, in
       )}
 
       <div className="card-container">
-        <div className="px-4 py-3 border-b-2 border-slate-50 bg-slate-50/50">
+        <div className="px-4 py-3 border-b-2 border-slate-50 bg-[#f8fafc]">
           <h3 className="text-sm font-extrabold text-slate-900">Purchase Details</h3>
         </div>
         <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <div className="space-y-1">
             <label className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Purchase #</label>
-            <input className="input-field bg-orange-50/50 border-orange-primary/20 text-orange-primary" value={nextNum} readOnly />
+            <input className="input-field bg-[#fff7ed] border-[rgba(249,115,22,0.2)] text-orange-primary" value={nextNum} readOnly />
           </div>
           <div className="space-y-1">
             <label className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Date</label>
@@ -253,7 +254,7 @@ const PurchaseForm: React.FC<PurchaseFormProps> = ({ state, onSave, onCancel, in
       </div>
 
       <div className="card-container">
-        <div className="px-4 py-3 border-b-2 border-slate-50 bg-slate-50/50 flex items-center justify-between">
+        <div className="px-4 py-3 border-b-2 border-slate-50 bg-[#f8fafc] flex items-center justify-between">
           <h3 className="text-sm font-extrabold text-slate-900">Items</h3>
           <button onClick={addItem} className="btn-secondary py-1 px-3 text-[10px]">
             <Plus size={12} className="inline mr-1" /> Add Line
@@ -304,7 +305,7 @@ const PurchaseForm: React.FC<PurchaseFormProps> = ({ state, onSave, onCancel, in
           </table>
         </div>
         
-        <div className="p-6 bg-slate-50/30 border-t-2 border-slate-50">
+        <div className="p-6 bg-[rgba(248,250,252,0.3)] border-t-2 border-slate-50">
           <div className="flex flex-col md:flex-row gap-8">
             <div className="flex-1 pt-4">
               <div className="flex flex-wrap gap-3">
@@ -328,7 +329,7 @@ const PurchaseForm: React.FC<PurchaseFormProps> = ({ state, onSave, onCancel, in
               )}
             </div>
             
-            <div className="w-full md:w-80 bg-gradient-to-br from-orange-50 to-orange-100/30 border-2 border-orange-primary/10 rounded-xl p-5 space-y-3">
+            <div className="w-full md:w-80 bg-gradient-to-br from-[#fff7ed] to-[rgba(255,237,213,0.3)] border-2 border-[rgba(249,115,22,0.1)] rounded-xl p-5 space-y-3">
               <div className="flex justify-between text-sm font-bold text-slate-500">
                 <span>Purchase Value</span>
                 <span>{Nu(totals.val)}</span>
@@ -341,7 +342,7 @@ const PurchaseForm: React.FC<PurchaseFormProps> = ({ state, onSave, onCancel, in
                 <span>Sales Tax</span>
                 <span>{Nu(totals.st)}</span>
               </div>
-              <div className="pt-3 border-t-2 border-orange-primary/10 flex justify-between items-center">
+              <div className="pt-3 border-t-2 border-[rgba(249,115,22,0.1)] flex justify-between items-center">
                 <span className="text-sm font-extrabold text-slate-900">Total Landed Cost</span>
                 <span className="text-xl font-extrabold text-orange-primary tracking-tight">{Nu(totals.grand)}</span>
               </div>

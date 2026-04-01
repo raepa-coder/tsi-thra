@@ -54,10 +54,10 @@ const ItemDropdown: React.FC<ItemDropdownProps> = ({ items, onSelect, onClose, a
   return (
     <div 
       ref={dropdownRef}
-      className="fixed z-[9999] bg-white border-2 border-orange-primary/30 rounded-xl shadow-2xl flex flex-col overflow-hidden"
+      className="fixed z-[9999] bg-white border-2 border-[rgba(249,115,22,0.3)] rounded-xl shadow-2xl flex flex-col overflow-hidden"
       style={getPosition()}
     >
-      <div className="p-3 border-b-2 border-slate-100 bg-slate-50/50 flex items-center gap-3">
+      <div className="p-3 border-b-2 border-slate-100 bg-[rgba(248,250,252,0.5)] flex items-center gap-3">
         <Search size={18} className="text-slate-400" />
         <input 
           autoFocus
@@ -74,7 +74,7 @@ const ItemDropdown: React.FC<ItemDropdownProps> = ({ items, onSelect, onClose, a
             <div 
               key={idx}
               onClick={() => onSelect(item)}
-              className="px-4 py-3 cursor-pointer grid grid-cols-[1fr_auto] gap-4 items-center border-b border-slate-50 hover:bg-orange-50/50 transition-colors"
+              className="px-4 py-3 cursor-pointer grid grid-cols-[1fr_auto] gap-4 items-center border-b border-slate-50 hover:bg-[rgba(255,247,237,0.5)] transition-colors"
             >
               <div>
                 <div className="text-sm font-extrabold text-slate-900 leading-tight">{item.n}</div>

@@ -8,13 +8,28 @@ export interface Settings {
   theme?: 'light' | 'dark';
 }
 
+export interface RxData {
+  sph: string;
+  cyl: string;
+  axis: string;
+  add: string;
+  pd: string;
+}
+
+export interface Prescription {
+  od: RxData; // Right Eye
+  os: RxData; // Left Eye
+  date: string;
+  notes?: string;
+}
+
 export interface Customer {
   id: string;
   name: string;
   phone: string;
   address: string;
-  powerL?: string;
-  powerR?: string;
+  rx?: Prescription;
+  history?: Prescription[];
   email?: string;
   lastVisit?: string;
 }
@@ -31,6 +46,11 @@ export interface BTCItem {
   sup: string;
   desc?: string;
   reorderLevel?: number;
+  brand?: string;
+  model?: string;
+  color?: string;
+  size?: string;
+  category: 'Frame' | 'Lens' | 'Contact Lens' | 'Accessory' | 'Service';
 }
 
 export interface InvoiceLine {
@@ -44,6 +64,8 @@ export interface InvoiceLine {
   net: number;
   tax: number;
   total: number;
+  isLens?: boolean;
+  lensType?: string;
 }
 
 export interface Invoice {
@@ -51,18 +73,21 @@ export interface Invoice {
   date: string;
   day: string;
   customer: string;
+  customerId?: string;
   addr: string;
   due: string;
-  powerL?: string;
-  powerR?: string;
+  rx?: Prescription;
   status: 'Unpaid' | 'Paid' | 'Partial';
   method: string;
+  transactionId?: string;
   lines: InvoiceLine[];
   sub: number;
   disc: number;
   tax: number;
   grand: number;
   paid: number;
+  balanceDue: number;
+  labStatus?: 'Pending' | 'In Progress' | 'Ready' | 'Delivered';
 }
 
 export interface PurchaseItem {
@@ -112,12 +137,31 @@ export interface POSSale {
   date: string;
   day: string;
   customer: string;
+  customerId?: string;
   item: string;
-  powerL?: string;
-  powerR?: string;
+  rx?: Prescription;
   lines: any[];
   method: string;
+  transactionId?: string;
   net: number;
   tax: number;
   total: number;
+  paid: number;
+  balanceDue: number;
+}
+
+export interface ExpenseCategory {
+  id: string;
+  name: string;
+}
+
+export interface Expense {
+  num: string;
+  date: string;
+  day: string;
+  categoryId: string;
+  categoryName: string;
+  amount: number;
+  method: string;
+  desc: string;
 }

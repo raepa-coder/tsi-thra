@@ -7,7 +7,7 @@ import html2canvas from 'html2canvas';
 
 interface PrintReceiptProps {
   record: any;
-  type: 'inv' | 'pur' | 'rec' | 'pay' | 'pos';
+  type: 'inv' | 'pur' | 'rec' | 'pay' | 'pos' | 'exp';
   settings: Settings;
   onClose: () => void;
   autoPrint?: boolean;
@@ -15,6 +15,8 @@ interface PrintReceiptProps {
 
 const PrintReceipt: React.FC<PrintReceiptProps> = ({ record, type, settings, onClose, autoPrint = false }) => {
   const printRef = useRef<HTMLDivElement>(null);
+
+  const [isGenerating, setIsGenerating] = useState(false);
 
   useEffect(() => {
     if (autoPrint) {
@@ -29,28 +31,15 @@ const PrintReceipt: React.FC<PrintReceiptProps> = ({ record, type, settings, onC
     const printContent = printRef.current;
     if (!printContent) return;
 
-    // Create a hidden iframe for printing
-    const iframe = document.createElement('iframe');
-    iframe.style.position = 'fixed';
-    iframe.style.right = '0';
-    iframe.style.bottom = '0';
-    iframe.style.width = '0';
-    iframe.style.height = '0';
-    iframe.style.border = '0';
-    document.body.appendChild(iframe);
-
-    const doc = iframe.contentWindow?.document;
-    if (!doc) return;
-
-    // Copy all styles to the iframe
+    // Copy all styles
     const styles = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
       .map(s => s.outerHTML)
       .join('');
 
-    doc.write(`
+    const htmlContent = `
       <html>
         <head>
-          <title>Print Receipt</title>
+          <title>Print Receipt - ${record.num}</title>
           ${styles}
           <style>
             @media print {
@@ -66,8 +55,9 @@ const PrintReceipt: React.FC<PrintReceiptProps> = ({ record, type, settings, onC
               }
               .no-print { display: none !important; }
             }
-            body { margin: 0; padding: 0; }
+            body { margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
             #printable-record { padding: 20px; }
+            img { max-width: 100%; height: auto; }
           </style>
         </head>
         <body>
@@ -76,30 +66,42 @@ const PrintReceipt: React.FC<PrintReceiptProps> = ({ record, type, settings, onC
           </div>
           <script>
             window.onload = () => {
-              window.focus();
-              window.print();
-              setTimeout(() => {
-                if (window.frameElement) {
-                  window.frameElement.remove();
-                }
-              }, 1000);
+              // Wait for images to load
+              const images = Array.from(document.images);
+              const promises = images.map(img => {
+                if (img.complete) return Promise.resolve();
+                return new Promise(resolve => {
+                  img.onload = resolve;
+                  img.onerror = resolve;
+                });
+              });
+
+              Promise.all(promises).then(() => {
+                setTimeout(() => {
+                  window.print();
+                }, 500);
+              });
             };
           </script>
         </body>
       </html>
-    `);
-    doc.close();
+    `;
 
-    // Cleanup iframe after printing
-    setTimeout(() => {
-      if (document.body.contains(iframe)) {
-        document.body.removeChild(iframe);
-      }
-    }, 2000);
+    const blob = new Blob([htmlContent], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const printWindow = window.open(url, '_blank');
+    
+    if (printWindow) {
+      printWindow.focus();
+      // Revoke the URL after some time to free up memory
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } else {
+      alert('Please allow popups to print the receipt.');
+    }
   };
 
   const handleExportPDF = async () => {
-    if (!printRef.current) return;
+    if (!printRef.current) return null;
     
     const element = printRef.current;
     const originalClassName = element.className;
@@ -108,49 +110,62 @@ const PrintReceipt: React.FC<PrintReceiptProps> = ({ record, type, settings, onC
     element.classList.add('bg-white', 'text-slate-900', 'shadow-none');
     element.classList.remove('dark', 'shadow-lg');
 
-    const canvas = await html2canvas(element, {
-      scale: 3, // Increased scale for sharper print
-      useCORS: true,
-      logging: false,
-      backgroundColor: '#ffffff',
-      windowWidth: element.scrollWidth,
-      windowHeight: element.scrollHeight
-    });
-    
-    // Restore original styles
-    element.className = originalClassName;
-    
-    const imgData = canvas.toDataURL('image/png');
-    const pdf = new jsPDF('p', 'mm', 'a4');
-    const imgProps = pdf.getImageProperties(imgData);
-    const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-    const pageHeight = pdf.internal.pageSize.getHeight();
-    
-    let heightLeft = pdfHeight;
-    let position = 0;
-    
-    pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
-    heightLeft -= pageHeight;
-    
-    while (heightLeft >= 0) {
-      position = heightLeft - pdfHeight;
-      pdf.addPage();
+    try {
+      const canvas = await html2canvas(element, {
+        scale: 2, // Reduced from 3 to 2 for better mobile performance
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff',
+        windowWidth: element.scrollWidth,
+        windowHeight: element.scrollHeight
+      });
+      
+      // Restore original styles
+      element.className = originalClassName;
+      
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const imgProps = pdf.getImageProperties(imgData);
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      
+      let heightLeft = pdfHeight;
+      let position = 0;
+      
       pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
       heightLeft -= pageHeight;
+      
+      while (heightLeft > 0) {
+        position = heightLeft - pdfHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
+        heightLeft -= pageHeight;
+      }
+      
+      return pdf;
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      element.className = originalClassName;
+      return null;
     }
-    
-    return pdf;
   };
 
   const handleDownloadPDF = async () => {
-    const pdf = await handleExportPDF();
-    if (pdf) {
-      const customerName = (record.customer || record.supplier || record.party || 'Walk-in').replace(/[^a-z0-9]/gi, '_');
-      const dateStr = (record.date || '').replace(/[^a-z0-9]/gi, '_');
-      const fileName = `Invoice_${customerName}_${dateStr}.pdf`;
-      
-      pdf.save(fileName);
+    setIsGenerating(true);
+    try {
+      const pdf = await handleExportPDF();
+      if (pdf) {
+        const customerName = (record.customer || record.supplier || record.party || 'Walk-in').replace(/[^a-z0-9]/gi, '_');
+        const dateStr = (record.date || '').replace(/[^a-z0-9]/gi, '_');
+        const fileName = `Invoice_${customerName}_${dateStr}.pdf`;
+        
+        pdf.save(fileName);
+      } else {
+        alert('Failed to generate PDF. Please try again.');
+      }
+    } finally {
+      setIsGenerating(false);
     }
   };
 
@@ -161,14 +176,13 @@ const PrintReceipt: React.FC<PrintReceiptProps> = ({ record, type, settings, onC
     const appUrl = window.location.origin;
     const invNum = record.num || 'Invoice';
     
-    const text = `Dear ${customerName}, your invoice ${invNum} for Nu. ${amount} from ${shopName} is ready. Download PDF here: ${appUrl}`;
+    const text = `Dear ${customerName}, your invoice ${invNum} for Nu. ${amount} from ${shopName} is ready.`;
     
     if (navigator.share) {
       try {
         await navigator.share({
           title: `${shopName} Invoice`,
           text: text,
-          url: appUrl
         });
       } catch (error) {
         console.error('Error sharing text:', error);
@@ -179,66 +193,82 @@ const PrintReceipt: React.FC<PrintReceiptProps> = ({ record, type, settings, onC
   };
 
   const handleSharePDF = async () => {
-    const pdf = await handleExportPDF();
-    if (!pdf) return;
-
-    const customerName = (record.customer || record.supplier || record.party || 'Walk-in').replace(/[^a-z0-9]/gi, '_');
-    const dateStr = (record.date || '').replace(/[^a-z0-9]/gi, '_');
-    const fileName = `Invoice_${customerName}_${dateStr}.pdf`;
-    
-    const pdfBlob = pdf.output('blob');
-    const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
-
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      try {
-        await navigator.share({
-          files: [file],
-          title: fileName,
-          text: `Invoice ${record.num} from ${settings.companyName}`
-        });
-      } catch (error) {
-        console.error('Error sharing PDF:', error);
+    setIsGenerating(true);
+    try {
+      const pdf = await handleExportPDF();
+      if (!pdf) {
+        alert('Failed to generate PDF. Please try again.');
+        return;
       }
-    } else {
-      alert('File sharing is not supported on this browser.');
+
+      const customerName = (record.customer || record.supplier || record.party || 'Walk-in').replace(/[^a-z0-9]/gi, '_');
+      const dateStr = (record.date || '').replace(/[^a-z0-9]/gi, '_');
+      const fileName = `Invoice_${customerName}_${dateStr}.pdf`;
+      
+      const pdfBlob = pdf.output('blob');
+      const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
+
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({
+            files: [file],
+            title: fileName,
+            text: `Invoice ${record.num} from ${settings.companyName}`
+          });
+        } catch (error) {
+          console.error('Error sharing PDF:', error);
+          // Fallback to download if share fails (e.g. user cancels or browser blocks)
+          pdf.save(fileName);
+        }
+      } else {
+        // Fallback to download if sharing files is not supported
+        alert('File sharing is not supported on this browser. Downloading instead.');
+        pdf.save(fileName);
+      }
+    } finally {
+      setIsGenerating(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(15,23,42,0.6)] backdrop-blur-sm p-4">
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto flex flex-col">
-        <div className="p-6 border-b-2 border-slate-50 flex justify-between items-center no-print sticky top-0 bg-white z-10">
-          <h2 className="text-xl font-extrabold text-slate-900">Print Preview</h2>
-          <div className="flex gap-2">
-            <button onClick={handlePrint} className="btn-primary flex items-center gap-2">
-              <Printer size={18} /> Print
+        <div className="p-4 md:p-6 border-b-2 border-slate-50 flex justify-between items-center no-print sticky top-0 bg-white z-10">
+          <h2 className="text-lg md:text-xl font-extrabold text-slate-900">Print Preview</h2>
+          <div className="flex flex-wrap justify-end gap-2">
+            <button onClick={handlePrint} disabled={isGenerating} className="btn-primary flex items-center gap-2 disabled:opacity-50 text-sm px-3 py-1.5 md:px-4 md:py-2">
+              <Printer size={16} className="md:w-[18px] md:h-[18px]" /> <span className="hidden sm:inline">Print</span>
             </button>
-            <button onClick={handleDownloadPDF} className="bg-slate-900 text-white px-4 py-2 rounded-xl font-bold hover:bg-slate-800 transition-all flex items-center gap-2">
-              <FileDown size={18} /> PDF
+            <button onClick={handleDownloadPDF} disabled={isGenerating} className="bg-slate-900 text-white px-3 py-1.5 md:px-4 md:py-2 rounded-xl font-bold hover:bg-slate-800 transition-all flex items-center gap-2 disabled:opacity-50 text-sm">
+              {isGenerating ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <FileDown size={16} className="md:w-[18px] md:h-[18px]" />} <span className="hidden sm:inline">PDF</span>
             </button>
-            <button onClick={handleShareText} className="bg-orange-primary text-white px-4 py-2 rounded-xl font-bold hover:bg-orange-600 transition-all flex items-center gap-2">
-              <Share2 size={18} /> Share
+            <button onClick={handleShareText} disabled={isGenerating} className="bg-orange-primary text-white px-3 py-1.5 md:px-4 md:py-2 rounded-xl font-bold hover:bg-orange-600 transition-all flex items-center gap-2 disabled:opacity-50 text-sm">
+              <Share2 size={16} className="md:w-[18px] md:h-[18px]" /> <span className="hidden sm:inline">Share</span>
             </button>
-            <button onClick={handleSharePDF} className="bg-slate-900 text-white px-4 py-2 rounded-xl font-bold hover:bg-slate-800 transition-all flex items-center gap-2">
-              <Share2 size={18} /> Share PDF
+            <button onClick={handleSharePDF} disabled={isGenerating} className="bg-slate-900 text-white px-3 py-1.5 md:px-4 md:py-2 rounded-xl font-bold hover:bg-slate-800 transition-all flex items-center gap-2 disabled:opacity-50 text-sm">
+              {isGenerating ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Share2 size={16} className="md:w-[18px] md:h-[18px]" />} <span className="hidden sm:inline">Share PDF</span>
             </button>
-            <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
-              <X size={24} className="text-slate-400" />
+            <button onClick={onClose} disabled={isGenerating} className="p-1.5 md:p-2 hover:bg-slate-100 rounded-full transition-colors disabled:opacity-50">
+              <X size={20} className="md:w-6 md:h-6 text-slate-400" />
             </button>
           </div>
         </div>
         
-        <div className="p-6 bg-slate-50 flex justify-center">
+        <div className="p-4 md:p-6 bg-slate-50 flex justify-center overflow-x-auto">
           <div 
             id="printable-record" 
             ref={printRef}
-            className="bg-white shadow-lg p-12 w-[210mm] min-h-[297mm] print:shadow-none print:p-0"
+            className="bg-white shadow-lg p-8 md:p-12 w-[210mm] min-h-[297mm] print:shadow-none print:p-0 shrink-0 origin-top"
           >
             {/* Shop Header */}
             <div className="flex justify-between items-start mb-12">
               <div className="flex gap-6 items-start">
-                {settings.logo && (
+                {settings.logo ? (
                   <img src={settings.logo} alt="Logo" className="h-20 w-auto object-contain" />
+                ) : (
+                  <div className="h-20 w-20 bg-[#fff7ed] rounded-2xl flex items-center justify-center text-orange-primary font-black text-2xl border-2 border-[#ffedd5]">
+                    TT
+                  </div>
                 )}
                 <div className="space-y-2">
                   <h1 className="text-3xl font-black text-orange-primary uppercase tracking-tighter leading-none">
@@ -253,7 +283,7 @@ const PrintReceipt: React.FC<PrintReceiptProps> = ({ record, type, settings, onC
               </div>
               <div className="text-right space-y-2">
                 <div className="inline-block bg-orange-primary text-white px-4 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest mb-2">
-                  {type === 'inv' ? 'Tax Invoice' : type === 'pur' ? 'Purchase Order' : type === 'pos' ? 'Cash Memo' : record.type + ' Voucher'}
+                  {type === 'inv' ? 'Tax Invoice' : type === 'pur' ? 'Purchase Order' : type === 'pos' ? 'Cash Memo' : type === 'exp' ? 'Expense Voucher' : record.type + ' Voucher'}
                 </div>
                 <h2 className="text-4xl font-black text-slate-900 tracking-tighter">#{record.num}</h2>
                 <p className="text-sm font-bold text-slate-500">{record.date}</p>
@@ -313,11 +343,15 @@ const PrintReceipt: React.FC<PrintReceiptProps> = ({ record, type, settings, onC
             )}
 
             {/* Voucher Details */}
-            {(type === 'rec' || type === 'pay') && (
+            {(type === 'rec' || type === 'pay' || type === 'exp') && (
               <div className="p-8 bg-slate-50 rounded-3xl mb-12 space-y-6">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm font-black text-slate-400 uppercase tracking-widest">Particulars</span>
-                  <span className="text-lg font-black text-slate-900">{record.acct}</span>
+                  <span className="text-sm font-black text-slate-400 uppercase tracking-widest">
+                    {type === 'exp' ? 'Category' : 'Particulars'}
+                  </span>
+                  <span className="text-lg font-black text-slate-900">
+                    {type === 'exp' ? record.categoryName : record.acct}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm font-black text-slate-400 uppercase tracking-widest">Description</span>

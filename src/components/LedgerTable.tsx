@@ -12,7 +12,7 @@ import html2canvas from 'html2canvas';
 import { User } from 'firebase/auth';
 
 interface LedgerTableProps {
-  type: 'inv' | 'pur' | 'rec' | 'pay' | 'pos';
+  type: 'inv' | 'pur' | 'rec' | 'pay' | 'pos' | 'exp';
   state: AppState;
   user: User | null;
   onEdit?: (record: any, type: string) => void;
@@ -95,8 +95,8 @@ const LedgerTable: React.FC<LedgerTableProps> = ({ type, state, user, onEdit, on
 
   const handleShareLedger = async () => {
     const shopName = state.settings.companyName || 'Arun Optical';
-    const appUrl = 'https://ais-pre-tmbxhu7ilda3f2dfwhdh2u-289371922607.asia-east1.run.app';
-    const ledgerName = type === 'inv' ? 'Sales' : type === 'pur' ? 'Purchase' : type === 'rec' ? 'Receipt' : type === 'pay' ? 'Payment' : 'POS Sales';
+    const appUrl = window.location.origin;
+    const ledgerName = type === 'inv' ? 'Sales' : type === 'pur' ? 'Purchase' : type === 'rec' ? 'Receipt' : type === 'pay' ? 'Payment' : type === 'pos' ? 'POS Sales' : 'Expense';
     
     const text = `Hello, here is the ${ledgerName} Ledger from ${shopName}. View here: ${appUrl}`;
     
@@ -175,6 +175,7 @@ const LedgerTable: React.FC<LedgerTableProps> = ({ type, state, user, onEdit, on
       case 'rec': dataToExport = state.vouchers.filter(v => v.type === 'Receipt'); break;
       case 'pay': dataToExport = state.vouchers.filter(v => v.type === 'Payment'); break;
       case 'pos': dataToExport = state.posSales; break;
+      case 'exp': dataToExport = state.expenses; break;
     }
     
     exportToCSV(filename, dataToExport);
@@ -184,28 +185,14 @@ const LedgerTable: React.FC<LedgerTableProps> = ({ type, state, user, onEdit, on
     const printContent = ledgerRef.current;
     if (!printContent) return;
 
-    // Create a hidden iframe for printing
-    const iframe = document.createElement('iframe');
-    iframe.style.position = 'fixed';
-    iframe.style.right = '0';
-    iframe.style.bottom = '0';
-    iframe.style.width = '0';
-    iframe.style.height = '0';
-    iframe.style.border = '0';
-    document.body.appendChild(iframe);
-
-    const doc = iframe.contentWindow?.document;
-    if (!doc) return;
-
-    // Copy all styles to the iframe
     const styles = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
       .map(s => s.outerHTML)
       .join('');
 
-    doc.write(`
+    const htmlContent = `
       <html>
         <head>
-          <title>Print Ledger</title>
+          <title>Print Ledger - ${type.toUpperCase()}</title>
           ${styles}
           <style>
             @media print {
@@ -244,8 +231,9 @@ const LedgerTable: React.FC<LedgerTableProps> = ({ type, state, user, onEdit, on
                 padding: 8px !important;
               }
             }
-            body { margin: 0; padding: 0; }
+            body { margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
             #printable-ledger { padding: 20px; }
+            img { max-width: 100%; height: auto; }
           </style>
         </head>
         <body>
@@ -254,26 +242,37 @@ const LedgerTable: React.FC<LedgerTableProps> = ({ type, state, user, onEdit, on
           </div>
           <script>
             window.onload = () => {
-              window.focus();
-              window.print();
-              setTimeout(() => {
-                if (window.frameElement) {
-                  window.frameElement.remove();
-                }
-              }, 1000);
+              const images = Array.from(document.images);
+              const promises = images.map(img => {
+                if (img.complete) return Promise.resolve();
+                return new Promise(resolve => {
+                  img.onload = resolve;
+                  img.onerror = resolve;
+                });
+              });
+
+              Promise.all(promises).then(() => {
+                setTimeout(() => {
+                  window.print();
+                }, 500);
+              });
             };
           </script>
         </body>
       </html>
-    `);
-    doc.close();
+    `;
 
-    // Cleanup iframe after printing
-    setTimeout(() => {
-      if (document.body.contains(iframe)) {
-        document.body.removeChild(iframe);
-      }
-    }, 2000);
+    const blob = new Blob([htmlContent], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const printWindow = window.open(url, '_blank');
+    
+    if (printWindow) {
+      printWindow.focus();
+      // Revoke the URL after some time to free up memory
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } else {
+      alert('Please allow popups to print the ledger.');
+    }
   };
 
   const getTableData = () => {
@@ -293,11 +292,11 @@ const LedgerTable: React.FC<LedgerTableProps> = ({ type, state, user, onEdit, on
               <td className="table-cell">{r.num}</td>
               <td className="table-cell">{r.date}</td>
               <td className="table-cell">{r.customer}</td>
-              <td className="table-cell text-xs font-mono text-slate-500">
+              <td className="table-cell text-xs font-mono text-[#94a3b8]">
                 {r.powerL || r.powerR ? (
                   <div className="flex flex-col gap-0.5">
-                    <span className="opacity-70">L: {r.powerL || '-'}</span>
-                    <span className="opacity-70">R: {r.powerR || '-'}</span>
+                    <span className="text-[#94a3b8]">L: {r.powerL || '-'}</span>
+                    <span className="text-[#94a3b8]">R: {r.powerR || '-'}</span>
                   </div>
                 ) : '-'}
               </td>
@@ -502,11 +501,11 @@ const LedgerTable: React.FC<LedgerTableProps> = ({ type, state, user, onEdit, on
               <td className="table-cell">{r.date}</td>
               <td className="table-cell">{r.day}</td>
               <td className="table-cell">{r.customer}</td>
-              <td className="table-cell text-xs font-mono text-slate-500">
+              <td className="table-cell text-xs font-mono text-[#94a3b8]">
                 {r.powerL || r.powerR ? (
                   <div className="flex flex-col gap-0.5">
-                    <span className="opacity-70">L: {r.powerL || '-'}</span>
-                    <span className="opacity-70">R: {r.powerR || '-'}</span>
+                    <span className="text-[#94a3b8]">L: {r.powerL || '-'}</span>
+                    <span className="text-[#94a3b8]">R: {r.powerR || '-'}</span>
                   </div>
                 ) : '-'}
               </td>
@@ -543,6 +542,53 @@ const LedgerTable: React.FC<LedgerTableProps> = ({ type, state, user, onEdit, on
           )
         };
       }
+      case 'exp': {
+        const filtered = state.expenses.filter(r => 
+          r.num.toLowerCase().includes(s) || 
+          r.categoryName.toLowerCase().includes(s) ||
+          r.desc.toLowerCase().includes(s)
+        );
+        return {
+          headers: ['#', 'Date', 'Category', 'Description', 'Method', 'Amount', ''],
+          data: filtered,
+          renderRow: (r: any, idx: number) => (
+            <tr key={idx} className="hover:bg-slate-50 transition-colors">
+              <td className="table-cell">{r.num}</td>
+              <td className="table-cell">{r.date}</td>
+              <td className="table-cell font-bold">{r.categoryName}</td>
+              <td className="table-cell text-xs text-slate-500 max-w-[200px] truncate">{r.desc}</td>
+              <td className="table-cell">{r.method}</td>
+              <td className="table-cell text-right text-red-600 font-bold">{Nu(r.amount)}</td>
+              <td className="table-cell no-print">
+                <div className="flex gap-2">
+                  <button onClick={() => setSelectedRecord(r)} className="text-slate-400 hover:text-orange-primary">
+                    <Printer size={14} />
+                  </button>
+                  {onEdit && (
+                    <button onClick={() => onEdit(r, 'exp')} className="text-slate-400 hover:text-blue-600" title="Edit Expense">
+                      <Edit2 size={14} />
+                    </button>
+                  )}
+                  {onDelete && (
+                    <button onClick={() => onDelete(r, 'exp')} className="text-slate-400 hover:text-red-600" title="Delete Expense">
+                      <Trash2 size={14} />
+                    </button>
+                  )}
+                </div>
+              </td>
+            </tr>
+          ),
+          footer: () => (
+            <tr className="bg-slate-50 font-extrabold">
+              <td colSpan={5} className="table-cell">Total</td>
+              <td className="table-cell text-right text-red-600">
+                {Nu(filtered.reduce((a, r) => a + r.amount, 0))}
+              </td>
+              <td className="table-cell"></td>
+            </tr>
+          )
+        };
+      }
     }
   };
 
@@ -555,7 +601,7 @@ const LedgerTable: React.FC<LedgerTableProps> = ({ type, state, user, onEdit, on
           <div className="relative">
             <input 
               type="text"
-              placeholder={`Search ${type === 'inv' ? 'Invoices' : type === 'pur' ? 'Purchases' : type === 'pos' ? 'POS Sales' : 'Vouchers'}...`}
+              placeholder={`Search ${type === 'inv' ? 'Invoices' : type === 'pur' ? 'Purchases' : type === 'pos' ? 'POS Sales' : type === 'exp' ? 'Expenses' : 'Vouchers'}...`}
               className="input-field pl-10"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -583,7 +629,7 @@ const LedgerTable: React.FC<LedgerTableProps> = ({ type, state, user, onEdit, on
           </button>
           <button 
             onClick={handleShareLedger}
-            className="btn-secondary flex items-center gap-2 text-xs py-1.5 bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
+            className="btn-secondary flex items-center gap-2 text-xs py-1.5 bg-[#f0fdf4] text-[#15803d] border-[#bbf7d0] hover:bg-[#dcfce7]"
           >
             <Share2 size={14} />
             Share Ledger
@@ -618,7 +664,7 @@ const LedgerTable: React.FC<LedgerTableProps> = ({ type, state, user, onEdit, on
             </div>
             <div className="mt-4 border-b-2 border-slate-900 pb-2 text-center">
               <h2 className="text-xl font-extrabold uppercase tracking-wider">
-                {type === 'inv' ? 'Sales Ledger' : type === 'pur' ? 'Purchase Ledger' : type === 'rec' ? 'Receipt Ledger' : type === 'pay' ? 'Payment Ledger' : 'POS Sales Ledger'}
+                {type === 'inv' ? 'Sales Ledger' : type === 'pur' ? 'Purchase Ledger' : type === 'rec' ? 'Receipt Ledger' : type === 'pay' ? 'Payment Ledger' : type === 'pos' ? 'POS Sales Ledger' : 'Expense Ledger'}
               </h2>
               <p className="text-xs text-slate-500">Generated on {new Date().toLocaleDateString()}</p>
             </div>
@@ -645,7 +691,7 @@ const LedgerTable: React.FC<LedgerTableProps> = ({ type, state, user, onEdit, on
       )}
 
       {paymentModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 no-print">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[rgba(15,23,42,0.6)] backdrop-blur-sm p-4 no-print">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden">
             <div className="p-6 border-b-2 border-slate-50 flex justify-between items-center">
               <h2 className="text-xl font-extrabold text-slate-900">
@@ -656,7 +702,7 @@ const LedgerTable: React.FC<LedgerTableProps> = ({ type, state, user, onEdit, on
               </button>
             </div>
             <div className="p-6 space-y-4">
-              <div className="p-4 bg-orange-50 rounded-2xl border border-orange-100">
+              <div className="p-4 bg-[#fff7ed] rounded-2xl border border-[#ffedd5]">
                 <div className="flex justify-between text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
                   <span>{paymentType === 'inv' ? 'Invoice #' : 'Purchase #'}</span>
                   <span>Outstanding</span>

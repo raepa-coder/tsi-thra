@@ -23,6 +23,8 @@ import InvoiceForm from './components/InvoiceForm';
 import PurchaseForm from './components/PurchaseForm';
 import VoucherForm from './components/VoucherForm';
 import POSForm from './components/POSForm';
+import ExpenseForm from './components/ExpenseForm';
+import ExpenseCategories from './components/ExpenseCategories';
 import InventoryCatalog from './components/InventoryCatalog';
 import LedgerTable from './components/LedgerTable';
 import Reports from './components/Reports';
@@ -39,7 +41,7 @@ const App: React.FC = () => {
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [state, setState] = useState<AppState>(initialAppState);
   const [activePage, setActivePage] = useState('dash');
-  const [notification, setNotification] = useState<string | null>(null);
+  const [notification, setNotification] = useState<{ msg: string, type: 'success' | 'error' } | null>(null);
   const [lastSavedRecord, setLastSavedRecord] = useState<{ record: any, type: 'inv' | 'pur' | 'rec' | 'pay' | 'pos', autoPrint?: boolean } | null>(null);
   const [editingRecord, setEditingRecord] = useState<{ record: any, type: string } | null>(null);
   const [confirmModal, setConfirmModal] = useState<{
@@ -84,6 +86,8 @@ const App: React.FC = () => {
     const vouchersRef = collection(userRef, 'vouchers');
     const posSalesRef = collection(userRef, 'posSales');
     const customersRef = collection(userRef, 'customers');
+    const expensesRef = collection(userRef, 'expenses');
+    const categoriesRef = collection(userRef, 'expenseCategories');
 
     // Sync Settings
     const unsubSettings = onSnapshot(configRef, (snap) => {
@@ -144,6 +148,23 @@ const App: React.FC = () => {
       setState(prev => ({ ...prev, customers: snap.docs.map(d => d.data() as any) }));
     }, (e) => handleFirestoreError(e, OperationType.GET, customersRef.path));
 
+    // Sync Expenses
+    const unsubExpenses = onSnapshot(expensesRef, (snap) => {
+      setState(prev => ({ ...prev, expenses: snap.docs.map(d => d.data() as any) }));
+    }, (e) => handleFirestoreError(e, OperationType.GET, expensesRef.path));
+
+    // Sync Categories
+    const unsubCategories = onSnapshot(categoriesRef, (snap) => {
+      if (snap.empty && snap.metadata.fromCache === false) {
+        initialAppState.expenseCategories.forEach(cat => {
+          const catDoc = doc(categoriesRef, cat.id);
+          setDoc(catDoc, cat).catch(e => handleFirestoreError(e, OperationType.WRITE, catDoc.path));
+        });
+      } else {
+        setState(prev => ({ ...prev, expenseCategories: snap.docs.map(d => d.data() as any) }));
+      }
+    }, (e) => handleFirestoreError(e, OperationType.GET, categoriesRef.path));
+
     return () => {
       unsubSettings();
       unsubCounters();
@@ -153,11 +174,13 @@ const App: React.FC = () => {
       unsubVouchers();
       unsubPOS();
       unsubCustomers();
+      unsubExpenses();
+      unsubCategories();
     };
   }, [user]);
 
-  const showNotification = (msg: string) => {
-    setNotification(msg);
+  const showNotification = (msg: string, type: 'success' | 'error' = 'success') => {
+    setNotification({ msg, type });
     setTimeout(() => setNotification(null), 3000);
   };
 
@@ -216,7 +239,7 @@ const App: React.FC = () => {
     if (!user) return;
     const customerRef = doc(db, 'users', user.uid, 'customers', customer.id);
     try {
-      await setDoc(customerRef, customer);
+      await setDoc(customerRef, customer, { merge: true });
     } catch (e) {
       handleFirestoreError(e, OperationType.WRITE, customerRef.path);
     }
@@ -228,16 +251,30 @@ const App: React.FC = () => {
     
     // Save/Update customer
     if (invoice.customer && invoice.customer !== 'Unknown') {
-      const customerId = invoice.phone || invoice.customer;
-      await handleSaveCustomer({
+      const customerId = invoice.customerId || invoice.phone || invoice.customer;
+      const customerData = {
         id: customerId,
         name: invoice.customer,
         phone: invoice.phone || '',
         address: invoice.addr || '',
-        powerL: invoice.powerL || '',
-        powerR: invoice.powerR || '',
-        lastVisit: invoice.date
-      });
+        lastVisit: invoice.date,
+        rx: invoice.rx || null
+      };
+      await handleSaveCustomer(customerData);
+
+      // Save Rx History
+      if (invoice.rx && user) {
+        const rxRef = doc(db, 'users', user.uid, 'customers', customerId, 'prescriptions', invoice.num);
+        try {
+          await setDoc(rxRef, {
+            ...invoice.rx,
+            invoiceNum: invoice.num,
+            date: invoice.date
+          });
+        } catch (e) {
+          handleFirestoreError(e, OperationType.WRITE, rxRef.path);
+        }
+      }
     }
 
     showNotification(`Invoice ${invoice.num} saved successfully!`);
@@ -302,6 +339,49 @@ const App: React.FC = () => {
     setActivePage('l_pos');
   };
 
+  const handleSaveExpense = async (expense: any, print = false) => {
+    if (!user) return;
+    const userRef = doc(db, 'users', user.uid);
+    const countersRef = doc(userRef, 'config', 'counters');
+    const expenseRef = doc(userRef, 'expenses', expense.num);
+
+    try {
+      await setDoc(expenseRef, expense);
+      if (!editingRecord) {
+        const newCounters = { ...state.counters, exp: state.counters.exp + 1 };
+        await setDoc(countersRef, newCounters);
+      }
+      showNotification(`Expense ${expense.num} recorded!`);
+      if (print) setLastSavedRecord({ record: expense, type: 'exp' as any, autoPrint: true });
+      setEditingRecord(null);
+      setActivePage('l_exp');
+    } catch (e) {
+      handleFirestoreError(e, OperationType.WRITE, expenseRef.path);
+    }
+  };
+
+  const handleSaveCategory = async (category: any) => {
+    if (!user) return;
+    const catRef = doc(db, 'users', user.uid, 'expenseCategories', category.id);
+    try {
+      await setDoc(catRef, category);
+      showNotification('Category saved!');
+    } catch (e) {
+      handleFirestoreError(e, OperationType.WRITE, catRef.path);
+    }
+  };
+
+  const handleDeleteCategory = async (id: string) => {
+    if (!user) return;
+    const catRef = doc(db, 'users', user.uid, 'expenseCategories', id);
+    try {
+      await deleteDoc(catRef);
+      showNotification('Category deleted!');
+    } catch (e) {
+      handleFirestoreError(e, OperationType.DELETE, catRef.path);
+    }
+  };
+
   const handleAddItem = async (item: BTCItem) => {
     if (!user) return;
     const itemRef = doc(db, 'users', user.uid, 'items', item.btc);
@@ -348,7 +428,7 @@ const App: React.FC = () => {
 
   const handleNavigate = (page: string) => {
     // If navigating to a form page from sidebar, clear editing state
-    if (['inv_f', 'pur_f', 'rec_f', 'pay_f', 'pos_f'].includes(page)) {
+    if (['inv_f', 'pur_f', 'rec_f', 'pay_f', 'pos_f', 'exp_f'].includes(page)) {
       setEditingRecord(null);
     }
     setActivePage(page);
@@ -361,7 +441,8 @@ const App: React.FC = () => {
       pur: 'pur_f',
       rec: 'rec_f',
       pay: 'pay_f',
-      pos: 'pos_f'
+      pos: 'pos_f',
+      exp: 'exp_f'
     };
     setActivePage(pageMap[type]);
   };
@@ -379,7 +460,8 @@ const App: React.FC = () => {
           pur: 'purchases',
           rec: 'vouchers',
           pay: 'vouchers',
-          pos: 'posSales'
+          pos: 'posSales',
+          exp: 'expenses'
         }[type];
 
         const docRef = doc(userRef, collectionName, record.num);
@@ -425,8 +507,8 @@ const App: React.FC = () => {
     if (!user) return;
     setConfirmModal({
       show: true,
-      title: 'Clear Inventory',
-      message: 'Are you sure you want to clear the entire inventory? This action cannot be undone.',
+      title: 'Reset Inventory to Defaults',
+      message: 'Are you sure you want to reset the inventory? This will delete all current items and restore the default optical shop items.',
       onConfirm: async () => {
         const userRef = doc(db, 'users', user.uid);
         const itemsRef = collection(userRef, 'items');
@@ -435,22 +517,24 @@ const App: React.FC = () => {
           const { getDocs } = await import('firebase/firestore');
           const snap = await getDocs(itemsRef);
           
-          if (snap.empty) {
-            showNotification('Inventory is already empty.');
-            setConfirmModal(prev => ({ ...prev, show: false }));
-            return;
-          }
-
           const batch = writeBatch(db);
+          
+          // Delete existing items
           snap.docs.forEach(d => {
             batch.delete(d.ref);
           });
           
+          // Add default items
+          initialAppState.items.forEach(item => {
+            const itemDoc = doc(itemsRef, item.btc);
+            batch.set(itemDoc, item);
+          });
+          
           await batch.commit();
-          showNotification('Inventory cleared successfully!');
+          showNotification('Inventory reset to defaults successfully!');
         } catch (e) {
-          console.error('Clear failed:', e);
-          showNotification('Failed to clear inventory.');
+          console.error('Reset failed:', e);
+          showNotification('Failed to reset inventory.');
         }
         setConfirmModal(prev => ({ ...prev, show: false }));
       }
@@ -471,6 +555,8 @@ const App: React.FC = () => {
       l_rec: ['Receipts Ledger', 'Receipt vouchers'],
       l_pay: ['Payments Ledger', 'Payment vouchers'],
       l_pos: ['POS Log', 'All POS transactions'],
+      l_exp: ['Expenses Ledger', 'All expense records'],
+      exp_cat: ['Expense Categories', 'Manage your expense categories'],
       r_pnl: ['Profit & Loss', 'Auto-generated from all entries'],
       r_bs: ['Balance Sheet', 'As at today'],
       r_cf: ['Cash Flow', 'Operating activities'],
@@ -485,27 +571,32 @@ const App: React.FC = () => {
   const renderContent = () => {
     switch (activePage) {
       case 'dash': return <Dashboard state={state} onNavigate={handleNavigate} />;
-      case 'inv_f': return <InvoiceForm state={state} onSave={handleSaveInvoice} onCancel={() => { setEditingRecord(null); setActivePage('dash'); }} initialData={editingRecord?.type === 'inv' ? editingRecord.record : null} />;
-      case 'pur_f': return <PurchaseForm state={state} onSave={handleSavePurchase} onCancel={() => { setEditingRecord(null); setActivePage('dash'); }} initialData={editingRecord?.type === 'pur' ? editingRecord.record : null} />;
-      case 'rec_f': return <VoucherForm type="Receipt" state={state} onSave={handleSaveVoucher} onCancel={() => { setEditingRecord(null); setActivePage('dash'); }} initialData={editingRecord?.type === 'rec' ? editingRecord.record : null} />;
-      case 'pay_f': return <VoucherForm type="Payment" state={state} onSave={handleSaveVoucher} onCancel={() => { setEditingRecord(null); setActivePage('dash'); }} initialData={editingRecord?.type === 'pay' ? editingRecord.record : null} />;
-      case 'pos_f': return <POSForm state={state} onSave={handleSavePOS} onCancel={() => { setEditingRecord(null); setActivePage('dash'); }} initialData={editingRecord?.type === 'pos' ? editingRecord.record : null} />;
+      case 'inv_f': return <InvoiceForm state={state} user={user} onSave={handleSaveInvoice} onCancel={() => { setEditingRecord(null); setActivePage('dash'); }} initialData={editingRecord?.type === 'inv' ? editingRecord.record : null} showNotification={showNotification} />;
+      case 'pur_f': return <PurchaseForm state={state} onSave={handleSavePurchase} onCancel={() => { setEditingRecord(null); setActivePage('dash'); }} initialData={editingRecord?.type === 'pur' ? editingRecord.record : null} showNotification={showNotification} />;
+      case 'rec_f': return <VoucherForm type="Receipt" state={state} onSave={handleSaveVoucher} onCancel={() => { setEditingRecord(null); setActivePage('dash'); }} initialData={editingRecord?.type === 'rec' ? editingRecord.record : null} showNotification={showNotification} />;
+      case 'pay_f': return <VoucherForm type="Payment" state={state} onSave={handleSaveVoucher} onCancel={() => { setEditingRecord(null); setActivePage('dash'); }} initialData={editingRecord?.type === 'pay' ? editingRecord.record : null} showNotification={showNotification} />;
+      case 'pos_f': return <POSForm state={state} user={user} onSave={handleSavePOS} onCancel={() => { setEditingRecord(null); setActivePage('dash'); }} initialData={editingRecord?.type === 'pos' ? editingRecord.record : null} showNotification={showNotification} />;
+      case 'exp_f': return <ExpenseForm state={state} onSave={handleSaveExpense} onAddCategory={handleSaveCategory} onCancel={() => { setEditingRecord(null); setActivePage('dash'); }} initialData={editingRecord?.type === 'exp' ? editingRecord.record : null} showNotification={showNotification} />;
+      case 'exp_cat': return <ExpenseCategories state={state} onSave={handleSaveCategory} onDelete={handleDeleteCategory} showNotification={showNotification} />;
       case 'invent': return <InventoryCatalog 
         state={state} 
-        onAddItem={handleAddItem}
-        onUpdateItem={handleUpdateItem}
-        onDeleteItem={handleDeleteItem}
+        onAddItem={handleAddItem} 
+        onUpdateItem={handleUpdateItem} 
+        onDeleteItem={handleDeleteItem} 
+        onResetInventory={handleResetInventory}
+        showNotification={showNotification}
       />;
       case 'l_inv': return <LedgerTable type="inv" state={state} user={user} onNotification={showNotification} onEdit={handleEditRecord} onDelete={handleDeleteRecord} />;
       case 'l_pur': return <LedgerTable type="pur" state={state} user={user} onNotification={showNotification} onEdit={handleEditRecord} onDelete={handleDeleteRecord} />;
       case 'l_rec': return <LedgerTable type="rec" state={state} user={user} onNotification={showNotification} onEdit={handleEditRecord} onDelete={handleDeleteRecord} />;
       case 'l_pay': return <LedgerTable type="pay" state={state} user={user} onNotification={showNotification} onEdit={handleEditRecord} onDelete={handleDeleteRecord} />;
       case 'l_pos': return <LedgerTable type="pos" state={state} user={user} onNotification={showNotification} onEdit={handleEditRecord} onDelete={handleDeleteRecord} />;
-      case 'r_pnl': return <Reports type="pnl" state={state} />;
-      case 'r_bs': return <Reports type="bs" state={state} />;
-      case 'r_cf': return <Reports type="cf" state={state} />;
-      case 'r_tb': return <Reports type="tb" state={state} />;
-      case 'sett': return <Settings state={state} onSave={handleSaveSettings} onResetInventory={handleResetInventory} />;
+      case 'l_exp': return <LedgerTable type="exp" state={state} user={user} onNotification={showNotification} onEdit={handleEditRecord} onDelete={handleDeleteRecord} />;
+      case 'r_pnl': return <Reports type="pnl" state={state} showNotification={showNotification} />;
+      case 'r_bs': return <Reports type="bs" state={state} showNotification={showNotification} />;
+      case 'r_cf': return <Reports type="cf" state={state} showNotification={showNotification} />;
+      case 'r_tb': return <Reports type="tb" state={state} showNotification={showNotification} />;
+      case 'sett': return <Settings state={state} onSave={handleSaveSettings} onResetInventory={handleResetInventory} showNotification={showNotification} />;
       default: return <Dashboard state={state} onNavigate={handleNavigate} />;
     }
   };
@@ -527,20 +618,29 @@ const App: React.FC = () => {
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border-2 border-orange-primary/10 p-10 max-w-md w-full text-center space-y-8 relative z-10"
+          className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border-2 border-[rgba(249,115,22,0.1)] p-10 max-w-md w-full text-center space-y-8 relative z-10"
         >
-          <div className="w-20 h-20 bg-orange-primary/10 rounded-2xl flex items-center justify-center mx-auto shadow-inner">
-            <Store className="text-orange-primary" size={40} />
+          <div className="w-24 h-24 bg-[rgba(249,115,22,0.05)] rounded-2xl flex items-center justify-center mx-auto shadow-inner overflow-hidden border border-[rgba(249,115,22,0.1)]">
+            {state.settings.logo ? (
+              <img 
+                src={state.settings.logo} 
+                alt="Logo" 
+                className="w-full h-full object-contain p-2"
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <Store className="text-orange-primary" size={40} />
+            )}
           </div>
           
           <div className="space-y-2">
-            <h1 className="text-3xl font-black text-slate-900 dark:text-slate-100 tracking-tight">Tsi-Thra</h1>
-            <p className="text-slate-500 dark:text-slate-400 font-bold text-sm uppercase tracking-widest">Shop Management System</p>
+            <h1 className="text-3xl font-black text-slate-900 dark:text-slate-100 tracking-tight uppercase">Tsi-Thra</h1>
+            <p className="text-slate-500 dark:text-slate-400 font-bold text-sm uppercase tracking-widest">Bookkeeping System</p>
           </div>
 
-          <div className="p-6 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border-2 border-slate-100 dark:border-slate-800 text-left">
+          <div className="p-6 bg-slate-50 dark:bg-[rgba(30,41,59,0.5)] rounded-2xl border-2 border-slate-100 dark:border-slate-800 text-left">
             <p className="text-xs text-slate-500 dark:text-slate-400 font-bold leading-relaxed">
-              Welcome to Tsi-Thra. Please sign in with your Google account to access your shop's cloud database and sync your data across all devices.
+              Welcome to TSI-THRA BOOKKEEPING. Please sign in with your Google account to access your shop's cloud database and sync your data across all devices.
             </p>
           </div>
 
@@ -563,10 +663,10 @@ const App: React.FC = () => {
     <div className="flex h-screen bg-slate-50 dark:bg-slate-950 overflow-hidden transition-colors duration-300">
       <div className="strip-header fixed top-0 left-0 right-0 z-[100] no-print"></div>
       
-      <Sidebar activePage={activePage} onNavigate={handleNavigate} />
+      <Sidebar activePage={activePage} onNavigate={handleNavigate} settings={state.settings} />
       
       <div className="flex-1 flex flex-col min-w-0 pt-[5px]">
-        <TopBar title={title} subtitle={subtitle} />
+        <TopBar title={title} subtitle={subtitle} settings={state.settings} />
         
         <main className="flex-1 overflow-y-auto p-6 relative">
           <AnimatePresence mode="wait">
@@ -589,10 +689,10 @@ const App: React.FC = () => {
             initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 50 }}
-            className="fixed bottom-6 right-6 bg-orange-primary text-white px-6 py-3 rounded-xl font-bold shadow-2xl z-[200] flex items-center gap-3 no-print"
+            className={`fixed bottom-6 right-6 ${notification.type === 'error' ? 'bg-red-600' : 'bg-orange-primary'} text-white px-6 py-3 rounded-xl font-bold shadow-2xl z-[200] flex items-center gap-3 no-print`}
           >
-            <div className="w-2 h-2 rounded-full bg-white animate-pulse"></div>
-            {notification}
+            <div className={`w-2 h-2 rounded-full bg-white ${notification.type === 'error' ? '' : 'animate-pulse'}`}></div>
+            {notification.msg}
           </motion.div>
         )}
       </AnimatePresence>
@@ -605,15 +705,15 @@ const App: React.FC = () => {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setConfirmModal(prev => ({ ...prev, show: false }))}
-              className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm"
+              className="absolute inset-0 bg-[rgba(2,6,23,0.6)] backdrop-blur-sm"
             />
             <motion.div 
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border-2 border-orange-primary/10 p-8 max-w-sm w-full space-y-6"
+              className="relative bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border-2 border-[rgba(249,115,22,0.1)] p-8 max-w-sm w-full space-y-6"
             >
-              <div className="w-16 h-16 bg-red-50 dark:bg-red-900/20 rounded-2xl flex items-center justify-center mx-auto">
+              <div className="w-16 h-16 bg-red-50 dark:bg-[rgba(127,29,29,0.2)] rounded-2xl flex items-center justify-center mx-auto">
                 <AlertTriangle className="text-red-600" size={32} />
               </div>
               
@@ -633,7 +733,7 @@ const App: React.FC = () => {
                 </button>
                 <button 
                   onClick={confirmModal.onConfirm}
-                  className="flex-1 px-4 py-3 rounded-xl bg-red-600 text-white font-extrabold uppercase tracking-widest text-[10px] hover:bg-red-700 shadow-lg shadow-red-600/20 transition-colors"
+                  className="flex-1 px-4 py-3 rounded-xl bg-red-600 text-white font-extrabold uppercase tracking-widest text-[10px] hover:bg-red-700 shadow-lg shadow-[rgba(220,38,38,0.2)] transition-colors"
                 >
                   Confirm
                 </button>

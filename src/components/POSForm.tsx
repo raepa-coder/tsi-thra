@@ -4,15 +4,18 @@ import { BTCItem, Customer } from '../types';
 import { Plus, Trash2, Save, X, Store, Printer, Search } from 'lucide-react';
 import ItemDropdown from './ItemDropdown';
 import CustomerDropdown from './CustomerDropdown';
+import { User } from 'firebase/auth';
 
 interface POSFormProps {
   state: AppState;
+  user: User | null;
   onSave: (sale: any, print?: boolean) => void;
   onCancel: () => void;
   initialData?: any;
+  showNotification: (msg: string, type?: 'success' | 'error') => void;
 }
 
-const POSForm: React.FC<POSFormProps> = ({ state, onSave, onCancel, initialData }) => {
+const POSForm: React.FC<POSFormProps> = ({ state, user, onSave, onCancel, initialData, showNotification }) => {
   const nextNum = initialData ? initialData.num : formatDocNum('pos', state.counters.pos);
   const [date, setDate] = useState(initialData?.date || today());
   const [customer, setCustomer] = useState(initialData?.customer || 'Walk-in');
@@ -78,8 +81,10 @@ const POSForm: React.FC<POSFormProps> = ({ state, onSave, onCancel, initialData 
   const handleCustomerSelect = (c: Customer) => {
     setCustomer(c.name);
     setPhone(c.phone);
-    setPowerL(c.powerL || '');
-    setPowerR(c.powerR || '');
+    if (c.rx) {
+      setPowerL(c.rx.os.sph); // Fallback or just ignore
+      setPowerR(c.rx.od.sph);
+    }
     setShowCustomerLookup(false);
   };
 
@@ -92,7 +97,7 @@ const POSForm: React.FC<POSFormProps> = ({ state, onSave, onCancel, initialData 
   const handleSave = (print = false) => {
     const validLines = lines.filter(l => l.btc && l.btc.trim() !== '');
     if (validLines.length === 0) {
-      alert('Please add at least one item with a valid BTC code.');
+      showNotification('Please add at least one item with a valid BTC code.', 'error');
       return;
     }
 
@@ -116,14 +121,14 @@ const POSForm: React.FC<POSFormProps> = ({ state, onSave, onCancel, initialData 
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3 bg-orange-primary/10 border-2 border-orange-primary/20 rounded-full px-4 py-1.5 w-fit">
+      <div className="flex items-center gap-3 bg-[rgba(249,115,22,0.1)] border-2 border-[rgba(249,115,22,0.2)] rounded-full px-4 py-1.5 w-fit">
         <span className="text-[11px] font-extrabold text-orange-primary uppercase tracking-widest">🏪 {initialData ? 'Edit POS Sale' : 'POS Sale'}</span>
-        <span className="w-1 h-1 rounded-full bg-orange-primary/30"></span>
+        <span className="w-1 h-1 rounded-full bg-[rgba(249,115,22,0.3)]"></span>
         <span className="text-[11px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-widest">{initialData ? 'Editing' : 'Next'}: <strong>{nextNum}</strong></span>
       </div>
 
       <div className="card-container">
-        <div className="px-4 py-3 border-b-2 border-slate-50 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex items-center justify-between">
+        <div className="px-4 py-3 border-b-2 border-slate-50 dark:border-slate-800 bg-[#f8fafc] dark:bg-[rgba(15,23,42,0.5)] flex items-center justify-between">
           <h3 className="text-sm font-extrabold text-slate-900 dark:text-slate-100">Sale Details</h3>
           <div ref={customerRef}>
             <button 
@@ -137,7 +142,7 @@ const POSForm: React.FC<POSFormProps> = ({ state, onSave, onCancel, initialData 
         <div className="p-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="space-y-1">
             <label className="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Receipt #</label>
-            <input className="input-field bg-orange-50/50 dark:bg-orange-900/10 border-orange-primary/20 text-orange-primary" value={nextNum} readOnly />
+            <input className="input-field bg-[#fff7ed] dark:bg-[rgba(124,45,18,0.1)] border-[rgba(249,115,22,0.2)] text-orange-primary" value={nextNum} readOnly />
           </div>
           <div className="space-y-1">
             <label className="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Date</label>
@@ -163,7 +168,7 @@ const POSForm: React.FC<POSFormProps> = ({ state, onSave, onCancel, initialData 
       </div>
 
       <div className="card-container">
-        <div className="px-4 py-3 border-b-2 border-slate-50 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex items-center justify-between">
+        <div className="px-4 py-3 border-b-2 border-slate-50 dark:border-slate-800 bg-[#f8fafc] dark:bg-[rgba(15,23,42,0.5)] flex items-center justify-between">
           <h3 className="text-sm font-extrabold text-slate-900 dark:text-slate-100">Items</h3>
           <button onClick={addLine} className="btn-secondary py-1 px-3 text-[10px]">
             <Plus size={12} className="inline mr-1" /> Add Item
@@ -184,7 +189,7 @@ const POSForm: React.FC<POSFormProps> = ({ state, onSave, onCancel, initialData 
             </thead>
             <tbody>
               {lines.map((line, idx) => (
-                <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-[rgba(30,41,59,0.5)] transition-colors">
                   <td className="p-2">
                     <div 
                       ref={el => { rowRefs.current[idx] = el; }}
@@ -210,7 +215,7 @@ const POSForm: React.FC<POSFormProps> = ({ state, onSave, onCancel, initialData 
           </table>
         </div>
         
-        <div className="p-6 bg-slate-50/30 dark:bg-slate-900/30 border-t-2 border-slate-50 dark:border-slate-800">
+        <div className="p-6 bg-[rgba(248,250,252,0.3)] dark:bg-[rgba(15,23,42,0.3)] border-t-2 border-slate-50 dark:border-slate-800">
           <div className="flex flex-col md:flex-row gap-8">
             <div className="flex-1 space-y-4">
               <div className="space-y-1">
@@ -237,7 +242,7 @@ const POSForm: React.FC<POSFormProps> = ({ state, onSave, onCancel, initialData 
               </div>
             </div>
             
-            <div className="w-full md:w-80 bg-gradient-to-br from-orange-50 to-orange-100/30 dark:from-orange-900/10 dark:to-orange-800/5 border-2 border-orange-primary/10 rounded-xl p-5 space-y-3">
+            <div className="w-full md:w-80 bg-gradient-to-br from-[#fff7ed] to-[rgba(255,237,213,0.3)] dark:from-[rgba(124,45,18,0.1)] dark:to-[rgba(154,52,18,0.05)] border-2 border-[rgba(249,115,22,0.1)] rounded-xl p-5 space-y-3">
               <div className="flex justify-between text-sm font-bold text-slate-500 dark:text-slate-400">
                 <span>Net Amount</span>
                 <span>{Nu(totals.net)}</span>
@@ -246,7 +251,7 @@ const POSForm: React.FC<POSFormProps> = ({ state, onSave, onCancel, initialData 
                 <span>Sales Tax</span>
                 <span>{Nu(totals.tax)}</span>
               </div>
-              <div className="pt-3 border-t-2 border-orange-primary/10 dark:border-orange-900/20 flex justify-between items-center">
+              <div className="pt-3 border-t-2 border-[rgba(249,115,22,0.1)] dark:border-[rgba(124,45,18,0.2)] flex justify-between items-center">
                 <span className="text-sm font-extrabold text-slate-900 dark:text-slate-100">Total</span>
                 <span className="text-xl font-extrabold text-orange-primary tracking-tight">{Nu(totals.total)}</span>
               </div>

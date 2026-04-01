@@ -10,7 +10,7 @@ service cloud.firestore {
     // Fields: companyName, address, phone, email, lowStockThreshold
     //
     // Collection: /users/{userId}/config/counters
-    // Fields: inv, pur, rec, pay, pos
+    // Fields: inv, pur, rec, pay, pos, exp
     //
     // Collection: /users/{userId}/items/{itemId}
     // Fields: n, btc, u, qty, p, cd, st, sup
@@ -29,6 +29,15 @@ service cloud.firestore {
     //
     // Collection: /users/{userId}/posSales/{posSaleId}
     // Fields: num, date, day, customer, item, lines, method, net, tax, total
+    //
+    // Collection: /users/{userId}/expenses/{expenseId}
+    // Fields: num, date, day, categoryId, categoryName, amount, method, desc
+    //
+    // Collection: /users/{userId}/expenseCategories/{categoryId}
+    // Fields: id, name
+    //
+    // Collection: /users/{userId}/customers/{customerId}/prescriptions/{rxId}
+    // Fields: od, os, date
     //
     // ===============================================================
 
@@ -99,6 +108,11 @@ service cloud.firestore {
              (!('lastVisit' in data) || (data.lastVisit is string));
     }
 
+    function isValidPrescription(data) {
+      return hasRequiredFields(['od', 'os', 'date']) &&
+             data.od is map && data.os is map && data.date is string;
+    }
+
     function isValidInvoice(data) {
       return hasRequiredFields(['num', 'date', 'day', 'customer', 'status', 'grand']) &&
              data.num is string &&
@@ -133,13 +147,29 @@ service cloud.firestore {
              data.total is number && data.total >= 0;
     }
 
+    function isValidExpense(data) {
+      return hasRequiredFields(['num', 'date', 'categoryId', 'categoryName', 'amount']) &&
+             data.num is string &&
+             data.date is string &&
+             data.categoryId is string &&
+             data.categoryName is string &&
+             data.amount is number && data.amount >= 0;
+    }
+
+    function isValidExpenseCategory(data) {
+      return hasRequiredFields(['id', 'name']) &&
+             data.id is string &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100;
+    }
+
     function isValidCounters(data) {
-      return hasRequiredFields(['inv', 'pur', 'rec', 'pay', 'pos']) &&
-             data.inv is int && data.inv >= 0 &&
-             data.pur is int && data.pur >= 0 &&
-             data.rec is int && data.rec >= 0 &&
-             data.pay is int && data.pay >= 0 &&
-             data.pos is int && data.pos >= 0;
+      return hasRequiredFields(['inv', 'pur', 'rec', 'pay', 'pos', 'exp']) &&
+             data.inv is number && data.inv >= 0 &&
+             data.pur is number && data.pur >= 0 &&
+             data.rec is number && data.rec >= 0 &&
+             data.pay is number && data.pay >= 0 &&
+             data.pos is number && data.pos >= 0 &&
+             data.exp is number && data.exp >= 0;
     }
 
     // ===============================================================
@@ -149,54 +179,55 @@ service cloud.firestore {
     match /users/{userId} {
       allow read, write: if isOwner(userId) || isAdmin();
 
-      match /{allPaths=**} {
-        allow read: if isOwner(userId) || isAdmin();
-      }
-
       match /config/settings {
-        allow read: if isOwner(userId) || isAdmin();
         allow create, update: if (isOwner(userId) || isAdmin()) && isValidSettings(request.resource.data);
       }
 
       match /config/counters {
-        allow read: if isOwner(userId) || isAdmin();
         allow create, update: if (isOwner(userId) || isAdmin()) && isValidCounters(request.resource.data);
       }
 
       match /items/{itemId} {
-        allow read: if isOwner(userId) || isAdmin();
         allow create, update: if (isOwner(userId) || isAdmin()) && isValidItem(request.resource.data);
-        allow delete: if isOwner(userId) || isAdmin();
       }
 
       match /invoices/{invoiceId} {
-        allow read: if isOwner(userId) || isAdmin();
         allow create, update: if (isOwner(userId) || isAdmin()) && isValidInvoice(request.resource.data);
-        allow delete: if isOwner(userId) || isAdmin();
       }
 
       match /purchases/{purchaseId} {
-        allow read: if isOwner(userId) || isAdmin();
         allow create, update: if (isOwner(userId) || isAdmin()) && isValidPurchase(request.resource.data);
-        allow delete: if isOwner(userId) || isAdmin();
       }
 
       match /vouchers/{voucherId} {
-        allow read: if isOwner(userId) || isAdmin();
         allow create, update: if (isOwner(userId) || isAdmin()) && isValidVoucher(request.resource.data);
-        allow delete: if isOwner(userId) || isAdmin();
       }
 
       match /posSales/{posSaleId} {
-        allow read: if isOwner(userId) || isAdmin();
         allow create, update: if (isOwner(userId) || isAdmin()) && isValidPOSSale(request.resource.data);
-        allow delete: if isOwner(userId) || isAdmin();
       }
 
       match /customers/{customerId} {
-        allow read: if isOwner(userId) || isAdmin();
         allow create, update: if (isOwner(userId) || isAdmin()) && isValidCustomer(request.resource.data);
-        allow delete: if isOwner(userId) || isAdmin();
+
+        match /prescriptions/{rxId} {
+          allow read, write: if isOwner(userId) || isAdmin();
+          allow create, update: if (isOwner(userId) || isAdmin()) && isValidPrescription(request.resource.data);
+        }
+      }
+
+      match /expenses/{expenseId} {
+        allow create, update: if (isOwner(userId) || isAdmin()) && isValidExpense(request.resource.data);
+      }
+
+      match /expenseCategories/{categoryId} {
+        allow read, write: if isOwner(userId) || isAdmin();
+        allow create, update: if (isOwner(userId) || isAdmin()) && isValidExpenseCategory(request.resource.data);
+      }
+
+      // Catch-all for other subcollections
+      match /{allPaths=**} {
+        allow read, write: if isOwner(userId) || isAdmin();
       }
     }
 

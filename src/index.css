@@ -283,3 +283,17 @@
 .print-only {
   display: none;
 }
+
+/* Mobile Optimization - Refined for Tailwind */
+@media (max-width: 768px) {
+  body {
+    font-size: 14px;
+  }
+
+  /* Make tables scrollable horizontally on mobile */
+  table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+}

@@ -7,9 +7,10 @@ import html2canvas from 'html2canvas';
 interface ReportsProps {
   type: 'pnl' | 'bs' | 'cf' | 'tb';
   state: AppState;
+  showNotification: (msg: string, type?: 'success' | 'error') => void;
 }
 
-const Reports: React.FC<ReportsProps> = ({ type, state }) => {
+const Reports: React.FC<ReportsProps> = ({ type, state, showNotification }) => {
   const reportRef = useRef<HTMLDivElement>(null);
   const [isExporting, setIsExporting] = useState(false);
 
@@ -81,28 +82,14 @@ const Reports: React.FC<ReportsProps> = ({ type, state }) => {
     const printContent = reportRef.current;
     if (!printContent) return;
 
-    // Create a hidden iframe for printing
-    const iframe = document.createElement('iframe');
-    iframe.style.position = 'fixed';
-    iframe.style.right = '0';
-    iframe.style.bottom = '0';
-    iframe.style.width = '0';
-    iframe.style.height = '0';
-    iframe.style.border = '0';
-    document.body.appendChild(iframe);
-
-    const doc = iframe.contentWindow?.document;
-    if (!doc) return;
-
-    // Copy all styles to the iframe
     const styles = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
       .map(s => s.outerHTML)
       .join('');
 
-    doc.write(`
+    const htmlContent = `
       <html>
         <head>
-          <title>Print Report</title>
+          <title>Print Report - ${type.toUpperCase()}</title>
           ${styles}
           <style>
             @media print {
@@ -126,8 +113,9 @@ const Reports: React.FC<ReportsProps> = ({ type, state }) => {
                 overflow: visible !important;
               }
             }
-            body { margin: 0; padding: 0; }
+            body { margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
             #printable-report { padding: 20px; }
+            img { max-width: 100%; height: auto; }
           </style>
         </head>
         <body>
@@ -136,26 +124,37 @@ const Reports: React.FC<ReportsProps> = ({ type, state }) => {
           </div>
           <script>
             window.onload = () => {
-              window.focus();
-              window.print();
-              setTimeout(() => {
-                if (window.frameElement) {
-                  window.frameElement.remove();
-                }
-              }, 1000);
+              const images = Array.from(document.images);
+              const promises = images.map(img => {
+                if (img.complete) return Promise.resolve();
+                return new Promise(resolve => {
+                  img.onload = resolve;
+                  img.onerror = resolve;
+                });
+              });
+
+              Promise.all(promises).then(() => {
+                setTimeout(() => {
+                  window.print();
+                }, 500);
+              });
             };
           </script>
         </body>
       </html>
-    `);
-    doc.close();
+    `;
 
-    // Cleanup iframe after printing
-    setTimeout(() => {
-      if (document.body.contains(iframe)) {
-        document.body.removeChild(iframe);
-      }
-    }, 2000);
+    const blob = new Blob([htmlContent], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const printWindow = window.open(url, '_blank');
+    
+    if (printWindow) {
+      printWindow.focus();
+      // Revoke the URL after some time to free up memory
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } else {
+      alert('Please allow popups to print the report.');
+    }
   };
 
   const RL = (l: string, v: number, cls = '') => (
@@ -166,7 +165,7 @@ const Reports: React.FC<ReportsProps> = ({ type, state }) => {
   );
 
   const SectionHeader = (l: string) => (
-    <div className="text-[10px] font-extrabold text-green-primary uppercase tracking-widest py-2 border-b-2 border-green-primary/20 mb-2">
+    <div className="text-[10px] font-extrabold text-green-primary uppercase tracking-widest py-2 border-b-2 border-[rgba(21,128,61,0.2)] mb-2">
       {l}
     </div>
   );
@@ -185,7 +184,15 @@ const Reports: React.FC<ReportsProps> = ({ type, state }) => {
     
     const gp = ti - tc;
     const py = state.vouchers.filter(v => v.type === 'Payment').reduce((s, r) => s + r.amount, 0);
-    const np = gp - py;
+    const exT = state.expenses.reduce((s, r) => s + r.amount, 0);
+    
+    // Group expenses by category
+    const expensesByCategory = state.expenseCategories.map(cat => ({
+      name: cat.name,
+      amount: state.expenses.filter(e => e.categoryId === cat.id).reduce((s, r) => s + r.amount, 0)
+    })).filter(c => c.amount > 0);
+
+    const np = gp - py - exT;
 
     return (
       <div className="max-w-xl space-y-6">
@@ -195,27 +202,32 @@ const Reports: React.FC<ReportsProps> = ({ type, state }) => {
           {RL('POS Tax Collected', pt)}
           {RL('Invoice Revenue', ir)}
           {RL('Cash Receipts', rc)}
-          {RL('Total Income', ti, 'bg-green-50/50')}
+          {RL('Total Income', ti, 'bg-[#f0fdf4]')}
           
           <div className="mt-6">
             {SectionHeader('Cost of Goods Sold')}
             {RL('Purchase Value', pv)}
             {RL('Customs Duty', pd)}
             {RL('Sales Tax on Purchases', ps)}
-            {RL('Total COGS', tc, 'bg-red-50/50')}
+            {RL('Total COGS', tc, 'bg-[#fef2f2]')}
           </div>
           
           <div className="mt-6">
-            {RL('Gross Profit', gp, 'bg-orange-50/50 text-orange-primary')}
+            {RL('Gross Profit', gp, 'bg-[#fff7ed] text-orange-primary')}
           </div>
           
           <div className="mt-6">
             {SectionHeader('Operating Expenses')}
-            {RL('Cash Payments', py)}
-            {RL('Total OPEX', py, 'bg-red-50/50')}
+            {RL('Cash Payments (Vouchers)', py)}
+            {expensesByCategory.map((cat, idx) => (
+              <div key={idx}>
+                {RL(cat.name, cat.amount)}
+              </div>
+            ))}
+            {RL('Total OPEX', py + exT, 'bg-[#fef2f2]')}
           </div>
           
-          <div className="mt-8 p-4 bg-orange-primary/10 border-2 border-orange-primary/20 rounded-xl flex justify-between items-center">
+          <div className="mt-8 p-4 bg-[#fff7ed] border-2 border-[rgba(249,115,22,0.2)] rounded-xl flex justify-between items-center">
             <span className="text-sm font-extrabold text-slate-900">Net Profit / (Loss)</span>
             <span className={`text-xl font-extrabold tracking-tight ${np >= 0 ? 'text-orange-primary' : 'text-red-600'}`}>{Nu(np)}</span>
           </div>
@@ -234,7 +246,8 @@ const Reports: React.FC<ReportsProps> = ({ type, state }) => {
     
     const ap = state.purchases.filter(r => r.status !== 'Paid').reduce((s, r) => s + r.grand, 0);
     const pyT = state.vouchers.filter(v => v.type === 'Payment').reduce((s, r) => s + r.amount, 0);
-    const tl = pyT + ap;
+    const exT = state.expenses.reduce((s, r) => s + r.amount, 0);
+    const tl = pyT + ap + exT;
     const eq = ta - tl;
 
     return (
@@ -246,16 +259,17 @@ const Reports: React.FC<ReportsProps> = ({ type, state }) => {
           {RL('POS Digital', pd2)}
           {RL('Accounts Receivable', ar)}
           {RL('Inventory at Cost', ic)}
-          {RL('Total Assets', ta, 'bg-green-50/50')}
+          {RL('Total Assets', ta, 'bg-[#f0fdf4]')}
           
           <div className="mt-6">
-            {SectionHeader('Liabilities')}
-            {RL('Cash Payments', pyT)}
+            {SectionHeader('Liabilities & Expenses')}
+            {RL('Cash Payments (Vouchers)', pyT)}
+            {RL('Recorded Expenses', exT)}
             {RL('Accounts Payable', ap)}
-            {RL('Total Liabilities', tl, 'bg-red-50/50')}
+            {RL('Total Liabilities', tl, 'bg-[#fef2f2]')}
           </div>
           
-          <div className="mt-8 p-4 bg-green-primary/10 border-2 border-green-primary/20 rounded-xl flex justify-between items-center">
+          <div className="mt-8 p-4 bg-[#f0fdf4] border-2 border-[rgba(21,128,61,0.2)] rounded-xl flex justify-between items-center">
             <span className="text-sm font-extrabold text-slate-900">Net Worth (Equity)</span>
             <span className="text-xl font-extrabold text-green-primary tracking-tight">{Nu(eq)}</span>
           </div>
@@ -273,7 +287,8 @@ const Reports: React.FC<ReportsProps> = ({ type, state }) => {
     
     const pp = state.purchases.filter(r => r.status === 'Paid').reduce((s, r) => s + r.grand, 0);
     const pyT = state.vouchers.filter(v => v.type === 'Payment').reduce((s, r) => s + r.amount, 0);
-    const to = pyT + pp;
+    const exT = state.expenses.reduce((s, r) => s + r.amount, 0);
+    const to = pyT + pp + exT;
     const net = ti - to;
 
     return (
@@ -284,16 +299,17 @@ const Reports: React.FC<ReportsProps> = ({ type, state }) => {
           {RL('POS Cash', pc)}
           {RL('POS Digital', pd2)}
           {RL('Invoice Collections', ic)}
-          {RL('Total Inflows', ti, 'bg-green-50/50')}
+          {RL('Total Inflows', ti, 'bg-[#f0fdf4]')}
           
           <div className="mt-6">
             {SectionHeader('Cash Outflows')}
             {RL('Payment Vouchers', pyT)}
+            {RL('Expenses Paid', exT)}
             {RL('Purchases Paid', pp)}
-            {RL('Total Outflows', to, 'bg-red-50/50')}
+            {RL('Total Outflows', to, 'bg-[#fef2f2]')}
           </div>
           
-          <div className="mt-8 p-4 bg-blue-primary/10 border-2 border-blue-primary/20 rounded-xl flex justify-between items-center">
+          <div className="mt-8 p-4 bg-[#eff6ff] border-2 border-[rgba(37,99,235,0.2)] rounded-xl flex justify-between items-center">
             <span className="text-sm font-extrabold text-slate-900">Net Cash Flow</span>
             <span className={`text-xl font-extrabold tracking-tight ${net >= 0 ? 'text-blue-600' : 'text-red-600'}`}>{Nu(net)}</span>
           </div>
@@ -309,16 +325,17 @@ const Reports: React.FC<ReportsProps> = ({ type, state }) => {
     const rT = state.vouchers.filter(v => v.type === 'Receipt').reduce((s, r) => s + r.amount, 0);
     
     const pyT = state.vouchers.filter(v => v.type === 'Payment').reduce((s, r) => s + r.amount, 0);
+    const exT = state.expenses.reduce((s, r) => s + r.amount, 0);
     const pv = state.purchases.reduce((s, r) => s + r.val, 0);
     const pd3 = state.purchases.reduce((s, r) => s + r.cd, 0);
     const ps = state.purchases.reduce((s, r) => s + r.st, 0);
     
-    const tD = pyT + pv + pd3 + ps;
+    const tD = pyT + exT + pv + pd3 + ps;
     const tC = pT + ptx + iR + rT;
 
     return (
       <div className="max-w-2xl">
-        <div className="card-container overflow-hidden">
+        <div className="card-container overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr>
@@ -328,14 +345,15 @@ const Reports: React.FC<ReportsProps> = ({ type, state }) => {
               </tr>
             </thead>
             <tbody>
-              <tr><td colSpan={3} className="bg-green-50/50 px-4 py-2 text-[10px] font-extrabold text-green-primary uppercase tracking-widest">Income — Credit Side</td></tr>
+              <tr><td colSpan={3} className="bg-[#f0fdf4] px-4 py-2 text-[10px] font-extrabold text-green-primary uppercase tracking-widest">Income — Credit Side</td></tr>
               <tr><td className="table-cell">POS Sales</td><td className="table-cell"></td><td className="table-cell text-right text-green-secondary">{Nu(pT)}</td></tr>
               <tr><td className="table-cell">POS Tax Collected</td><td className="table-cell"></td><td className="table-cell text-right text-green-secondary">{Nu(ptx)}</td></tr>
               <tr><td className="table-cell">Invoice Revenue</td><td className="table-cell"></td><td className="table-cell text-right text-green-secondary">{Nu(iR)}</td></tr>
               <tr><td className="table-cell">Cash Receipts</td><td className="table-cell"></td><td className="table-cell text-right text-green-secondary">{Nu(rT)}</td></tr>
               
-              <tr><td colSpan={3} className="bg-red-50/50 px-4 py-2 text-[10px] font-extrabold text-red-600 uppercase tracking-widest">Expenses — Debit Side</td></tr>
-              <tr><td className="table-cell">Cash Payments</td><td className="table-cell text-right text-red-600">{Nu(pyT)}</td><td className="table-cell"></td></tr>
+              <tr><td colSpan={3} className="bg-[#fef2f2] px-4 py-2 text-[10px] font-extrabold text-red-600 uppercase tracking-widest">Expenses — Debit Side</td></tr>
+              <tr><td className="table-cell">Cash Payments (Vouchers)</td><td className="table-cell text-right text-red-600">{Nu(pyT)}</td><td className="table-cell"></td></tr>
+              <tr><td className="table-cell">Recorded Expenses</td><td className="table-cell text-right text-red-600">{Nu(exT)}</td><td className="table-cell"></td></tr>
               <tr><td className="table-cell">Purchases Value</td><td className="table-cell text-right text-red-600">{Nu(pv)}</td><td className="table-cell"></td></tr>
               <tr><td className="table-cell">Customs Duty</td><td className="table-cell text-right text-red-600">{Nu(pd3)}</td><td className="table-cell"></td></tr>
               <tr><td className="table-cell">Sales Tax on Purchases</td><td className="table-cell text-right text-red-600">{Nu(ps)}</td><td className="table-cell"></td></tr>
@@ -345,7 +363,7 @@ const Reports: React.FC<ReportsProps> = ({ type, state }) => {
                 <td className="table-cell text-right text-red-600">{Nu(tD)}</td>
                 <td className="table-cell text-right text-green-secondary">{Nu(tC)}</td>
               </tr>
-              <tr className="bg-orange-primary/10 font-extrabold">
+              <tr className="bg-[#fff7ed] font-extrabold">
                 <td className="table-cell text-orange-primary">Net Difference</td>
                 <td colSpan={2} className="table-cell text-right text-orange-primary">{Nu(tC - tD)}</td>
               </tr>
@@ -387,9 +405,16 @@ const Reports: React.FC<ReportsProps> = ({ type, state }) => {
       </div>
       {/* Print-only header */}
       <div className="print-only mb-6 text-center">
-        <h1 className="text-2xl font-black text-orange-primary uppercase tracking-tighter">{state.settings.companyName}</h1>
-        <p className="text-sm font-bold text-slate-500">{state.settings.address}</p>
-        <p className="text-sm font-bold text-slate-500">Contact: {state.settings.phone}</p>
+        <div className="flex items-center gap-6 justify-center mb-4">
+          {state.settings.logo && (
+            <img src={state.settings.logo} alt="Logo" className="h-16 w-auto object-contain" />
+          )}
+          <div className="text-center">
+            <h1 className="text-2xl font-black text-orange-primary uppercase tracking-tighter">{state.settings.companyName}</h1>
+            <p className="text-sm font-bold text-slate-500">{state.settings.address}</p>
+            <p className="text-sm font-bold text-slate-500">Contact: {state.settings.phone}</p>
+          </div>
+        </div>
         <div className="mt-4 border-b-2 border-slate-900 pb-2">
           <h2 className="text-xl font-extrabold uppercase tracking-wider">
             {type === 'pnl' ? 'Profit & Loss Statement' : type === 'bs' ? 'Balance Sheet' : type === 'cf' ? 'Cash Flow Statement' : 'Trial Balance'}

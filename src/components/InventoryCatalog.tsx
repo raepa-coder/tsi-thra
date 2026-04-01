@@ -8,34 +8,33 @@ interface InventoryCatalogProps {
   onAddItem: (item: BTCItem) => Promise<void>;
   onUpdateItem: (item: BTCItem) => Promise<void>;
   onDeleteItem: (btc: string) => Promise<void>;
+  onResetInventory: () => void;
+  showNotification: (msg: string, type?: 'success' | 'error') => void;
 }
 
-const InventoryCatalog: React.FC<InventoryCatalogProps> = ({ state, onAddItem, onUpdateItem, onDeleteItem }) => {
+const InventoryCatalog: React.FC<InventoryCatalogProps> = ({ state, onAddItem, onUpdateItem, onDeleteItem, onResetInventory, showNotification }) => {
   const [query, setQuery] = useState('');
   const [editingItem, setEditingItem] = useState<{ index: number; item: BTCItem } | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [deletingBtc, setDeletingBtc] = useState<string | null>(null);
   
   const [newItem, setNewItem] = useState<BTCItem>({
-    n: '', btc: '', u: 'nmb', qty: 0, p: 0, cd: 0, st: 0, sup: '', reorderLevel: 0
+    n: '', btc: '', u: 'nmb', qty: 0, p: 0, cd: 0, st: 0, sup: '', reorderLevel: 0, category: 'Frame'
   });
 
   const handlePrint = () => {
     const printContent = document.querySelector('.print-only');
     if (!printContent) return;
 
-    const iframe = document.createElement('iframe');
-    iframe.style.display = 'none';
-    document.body.appendChild(iframe);
+    const styles = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
+      .map(s => s.outerHTML)
+      .join('');
 
-    const doc = iframe.contentWindow?.document;
-    if (!doc) return;
-
-    doc.open();
-    doc.write(`
+    const htmlContent = `
       <html>
         <head>
           <title>Inventory Catalog - ${state.settings.companyName}</title>
+          ${styles}
           <style>
             @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
             body { 
@@ -76,15 +75,23 @@ const InventoryCatalog: React.FC<InventoryCatalogProps> = ({ state, onAddItem, o
           <script>
             window.onload = () => {
               window.print();
-              setTimeout(() => {
-                window.frameElement.remove();
-              }, 1000);
             };
           </script>
         </body>
       </html>
-    `);
-    doc.close();
+    `;
+
+    const blob = new Blob([htmlContent], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const printWindow = window.open(url, '_blank');
+    
+    if (printWindow) {
+      printWindow.focus();
+      // Revoke the URL after some time to free up memory
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } else {
+      alert('Please allow popups to print the catalog.');
+    }
   };
 
   const filteredItems = state.items.map((item, index) => ({ item, index })).filter(({ item }) => {
@@ -127,13 +134,13 @@ const InventoryCatalog: React.FC<InventoryCatalogProps> = ({ state, onAddItem, o
 
     await onAddItem(newItem);
     setIsAdding(false);
-    setNewItem({ n: '', btc: '', u: 'nmb', qty: 0, p: 0, cd: 0, st: 0, sup: '', reorderLevel: 0 });
+    setNewItem({ n: '', btc: '', u: 'nmb', qty: 0, p: 0, cd: 0, st: 0, sup: '', reorderLevel: 0, category: 'Frame' });
   };
 
   const ItemForm = ({ item, onChange, onSave, onCancel, title }: any) => (
-    <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[200] flex items-center justify-center p-4 transition-all duration-300">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border-2 border-orange-primary/20">
-        <div className="px-6 py-4 border-b-2 border-slate-50 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 flex items-center justify-between">
+    <div className="fixed inset-0 bg-[rgba(15,23,42,0.4)] backdrop-blur-sm z-[200] flex items-center justify-center p-4 transition-all duration-300">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border-2 border-[rgba(249,115,22,0.2)]">
+        <div className="px-6 py-4 border-b-2 border-slate-50 dark:border-slate-800 bg-[#f8fafc] dark:bg-[rgba(30,41,59,0.5)] flex items-center justify-between">
           <h3 className="text-sm font-extrabold text-slate-900 dark:text-slate-100 uppercase tracking-wider">{title}</h3>
           <button onClick={onCancel} className="text-slate-400 hover:text-red-500 transition-colors"><X size={20} /></button>
         </div>
@@ -152,7 +159,7 @@ const InventoryCatalog: React.FC<InventoryCatalogProps> = ({ state, onAddItem, o
           </div>
           <div className="space-y-1">
             <label className="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Rate (Nu.)</label>
-            <input type="number" className="input-field border-orange-primary/30 focus:border-orange-primary" value={item.p} onChange={e => onChange({ ...item, p: +e.target.value })} />
+            <input type="number" className="input-field border-[rgba(249,115,22,0.3)] focus:border-orange-primary" value={item.p} onChange={e => onChange({ ...item, p: +e.target.value })} />
           </div>
           <div className="space-y-1">
             <label className="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Current Stock</label>
@@ -179,7 +186,7 @@ const InventoryCatalog: React.FC<InventoryCatalogProps> = ({ state, onAddItem, o
             <input className="input-field" value={item.sup} onChange={e => onChange({ ...item, sup: e.target.value })} />
           </div>
         </div>
-        <div className="px-6 py-4 bg-slate-50 dark:bg-slate-800/50 border-t-2 border-slate-50 dark:border-slate-800 flex gap-3">
+        <div className="px-6 py-4 bg-slate-50 dark:bg-[rgba(30,41,59,0.5)] border-t-2 border-slate-50 dark:border-slate-800 flex gap-3">
           <button onClick={onSave} className="btn-primary flex-1 flex items-center justify-center gap-2">
             <Save size={16} /> Save Item
           </button>
@@ -193,17 +200,20 @@ const InventoryCatalog: React.FC<InventoryCatalogProps> = ({ state, onAddItem, o
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between no-print">
-        <div className="flex items-center gap-3 bg-orange-50/50 dark:bg-orange-900/10 border-2 border-orange-primary/20 rounded-full px-4 py-1.5 w-fit">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 no-print">
+        <div className="flex items-center gap-3 bg-[#fff7ed] dark:bg-[rgba(124,45,18,0.1)] border-2 border-[rgba(249,115,22,0.2)] rounded-full px-4 py-1.5 w-fit">
           <span className="text-[11px] font-extrabold text-orange-primary dark:text-orange-primary uppercase tracking-widest">📦 Inventory Catalog</span>
-          <span className="w-1 h-1 rounded-full bg-orange-primary/30"></span>
+          <span className="w-1 h-1 rounded-full bg-[rgba(249,115,22,0.3)]"></span>
           <span className="text-[11px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-widest">{state.items.length} Items in Catalog</span>
         </div>
-        <div className="flex gap-2">
-          <button onClick={handlePrint} className="btn-secondary flex items-center gap-2 py-1.5">
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <button onClick={onResetInventory} className="btn-secondary flex items-center justify-center gap-2 py-1.5 text-red-500 hover:bg-red-50 hover:border-red-200 w-full sm:w-auto">
+            <AlertTriangle size={16} /> Reset to Defaults
+          </button>
+          <button onClick={handlePrint} className="btn-secondary flex items-center justify-center gap-2 py-1.5 w-full sm:w-auto">
             <Printer size={16} /> Print Catalog
           </button>
-          <button onClick={() => setIsAdding(true)} className="btn-primary flex items-center gap-2 py-1.5">
+          <button onClick={() => setIsAdding(true)} className="btn-primary flex items-center justify-center gap-2 py-1.5 w-full sm:w-auto">
             <Plus size={16} /> Add Item
           </button>
         </div>
@@ -228,9 +238,9 @@ const InventoryCatalog: React.FC<InventoryCatalogProps> = ({ state, onAddItem, o
             const isLowStock = item.qty <= state.settings.lowStockThreshold;
             
             return (
-              <div key={index} className={`card-container p-4 hover:border-orange-primary/30 transition-all group relative ${isLowStock ? 'border-red-200 bg-red-50/10 dark:border-red-900/30 dark:bg-red-900/10' : ''}`}>
+              <div key={index} className={`card-container p-4 hover:border-[rgba(249,115,22,0.3)] transition-all group relative ${isLowStock ? 'border-red-200 bg-[#fef2f2] dark:border-[rgba(127,29,29,0.3)] dark:bg-[rgba(127,29,29,0.1)]' : ''}`}>
                 <div className="absolute top-2 right-2 flex gap-1 z-10">
-                  <button onClick={() => handleEdit(index, item)} className="p-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md text-slate-400 hover:text-orange-primary hover:border-orange-primary/30 transition-all shadow-sm">
+                  <button onClick={() => handleEdit(index, item)} className="p-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md text-slate-400 hover:text-orange-primary hover:border-[rgba(249,115,22,0.3)] transition-all shadow-sm">
                     <Edit2 size={12} />
                   </button>
                   <button onClick={() => setDeletingBtc(item.btc)} className="p-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md text-slate-400 hover:text-red-500 hover:border-red-200 transition-all shadow-sm">
@@ -241,7 +251,7 @@ const InventoryCatalog: React.FC<InventoryCatalogProps> = ({ state, onAddItem, o
                 <div className="flex justify-between items-start mb-1">
                   <div className="text-[9px] font-extrabold text-orange-primary uppercase tracking-widest">OPTICAL ITEM</div>
                   {isLowStock && (
-                    <div className="flex items-center gap-1 text-[8px] font-black text-red-600 bg-red-100 dark:bg-red-900/30 px-1.5 py-0.5 rounded-full uppercase tracking-tighter animate-pulse">
+                    <div className="flex items-center gap-1 text-[8px] font-black text-red-600 bg-red-100 dark:bg-[rgba(127,29,29,0.3)] px-1.5 py-0.5 rounded-full uppercase tracking-tighter animate-pulse">
                       <AlertTriangle size={8} /> Low Stock
                     </div>
                   )}
@@ -351,10 +361,10 @@ const InventoryCatalog: React.FC<InventoryCatalogProps> = ({ state, onAddItem, o
       )}
 
       {deletingBtc && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[200] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden border-2 border-red-500/20">
+        <div className="fixed inset-0 bg-[rgba(15,23,42,0.4)] backdrop-blur-sm z-[200] flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden border-2 border-[rgba(239,68,68,0.2)]">
             <div className="p-6 text-center space-y-4">
-              <div className="w-16 h-16 bg-red-50 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto">
+              <div className="w-16 h-16 bg-red-50 dark:bg-[rgba(127,29,29,0.3)] rounded-full flex items-center justify-center mx-auto">
                 <Trash2 className="text-red-500" size={32} />
               </div>
               <div className="space-y-1">
@@ -362,7 +372,7 @@ const InventoryCatalog: React.FC<InventoryCatalogProps> = ({ state, onAddItem, o
                 <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">This action cannot be undone. Are you sure you want to remove this item from your inventory?</p>
               </div>
             </div>
-            <div className="px-6 py-4 bg-slate-50 dark:bg-slate-800/50 flex gap-3">
+            <div className="px-6 py-4 bg-slate-50 dark:bg-[rgba(30,41,59,0.5)] flex gap-3">
               <button onClick={handleDelete} className="flex-1 bg-red-500 hover:bg-red-600 text-white py-2.5 rounded-xl font-bold transition-all flex items-center justify-center gap-2">
                 <Trash2 size={16} /> Delete
               </button>

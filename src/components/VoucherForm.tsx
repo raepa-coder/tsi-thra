@@ -8,9 +8,10 @@ interface VoucherFormProps {
   onSave: (voucher: any, print?: boolean) => void;
   onCancel: () => void;
   initialData?: any;
+  showNotification: (msg: string, type?: 'success' | 'error') => void;
 }
 
-const VoucherForm: React.FC<VoucherFormProps> = ({ type, state, onSave, onCancel, initialData }) => {
+const VoucherForm: React.FC<VoucherFormProps> = ({ type, state, onSave, onCancel, initialData, showNotification }) => {
   const nextNum = initialData ? initialData.num : formatDocNum(type === 'Receipt' ? 'rec' : 'pay', type === 'Receipt' ? state.counters.rec : state.counters.pay);
   const [date, setDate] = useState(initialData?.date || today());
   const [party, setParty] = useState(initialData?.party || '');
@@ -36,7 +37,7 @@ const VoucherForm: React.FC<VoucherFormProps> = ({ type, state, onSave, onCancel
   return (
     <div className="space-y-6">
       <div className={`flex items-center gap-3 border-2 rounded-full px-4 py-1.5 w-fit ${
-        type === 'Receipt' ? 'bg-orange-50/50 border-orange-primary/20' : 'bg-red-50/50 border-red-600/20'
+        type === 'Receipt' ? 'bg-[#fff7ed] border-[rgba(249,115,22,0.2)]' : 'bg-[#fef2f2] border-[rgba(220,38,38,0.2)]'
       }`}>
         <span className={`text-[11px] font-extrabold uppercase tracking-widest ${
           type === 'Receipt' ? 'text-orange-primary' : 'text-red-600'
@@ -48,7 +49,7 @@ const VoucherForm: React.FC<VoucherFormProps> = ({ type, state, onSave, onCancel
       </div>
 
       <div className="card-container max-w-2xl">
-        <div className="px-4 py-3 border-b-2 border-slate-50 bg-slate-50/50">
+        <div className="px-4 py-3 border-b-2 border-slate-50 bg-[#f8fafc]">
           <h3 className="text-sm font-extrabold text-slate-900">{type} Details</h3>
         </div>
         <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-6">

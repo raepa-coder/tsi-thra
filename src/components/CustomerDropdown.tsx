@@ -55,10 +55,10 @@ const CustomerDropdown: React.FC<CustomerDropdownProps> = ({ customers, onSelect
   return (
     <div 
       ref={dropdownRef}
-      className="fixed z-[9999] bg-white border-2 border-orange-primary/30 rounded-xl shadow-2xl flex flex-col overflow-hidden"
+      className="fixed z-[9999] bg-white border-2 border-[rgba(249,115,22,0.3)] rounded-xl shadow-2xl flex flex-col overflow-hidden"
       style={getPosition()}
     >
-      <div className="p-3 border-b-2 border-slate-100 bg-slate-50/50 flex items-center gap-3">
+      <div className="p-3 border-b-2 border-slate-100 bg-[#f8fafc] flex items-center gap-3">
         <Search size={18} className="text-slate-400" />
         <input 
           autoFocus
@@ -75,11 +75,11 @@ const CustomerDropdown: React.FC<CustomerDropdownProps> = ({ customers, onSelect
             <div 
               key={idx}
               onClick={() => onSelect(c)}
-              className="px-4 py-3 cursor-pointer border-b border-slate-50 hover:bg-orange-50/50 transition-colors group"
+              className="px-4 py-3 cursor-pointer border-b border-slate-50 hover:bg-[#fff7ed] transition-colors group"
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-orange-primary/10 group-hover:text-orange-primary transition-colors">
+                  <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-[rgba(249,115,22,0.1)] group-hover:text-orange-primary transition-colors">
                     <User size={16} />
                   </div>
                   <div>

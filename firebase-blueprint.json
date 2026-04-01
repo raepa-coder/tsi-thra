@@ -41,9 +41,46 @@
         "powerL": { "type": "string" },
         "powerR": { "type": "string" },
         "email": { "type": "string" },
-        "lastVisit": { "type": "string" }
+        "lastVisit": { "type": "string" },
+        "rx": { "$ref": "Prescription" }
       },
       "required": ["id", "name", "phone"]
+    },
+    "Prescription": {
+      "title": "Prescription",
+      "description": "Eye prescription data",
+      "type": "object",
+      "properties": {
+        "od": { "type": "object" },
+        "os": { "type": "object" },
+        "date": { "type": "string" }
+      },
+      "required": ["od", "os", "date"]
+    },
+    "Expense": {
+      "title": "Expense",
+      "description": "Expense record",
+      "type": "object",
+      "properties": {
+        "num": { "type": "string" },
+        "date": { "type": "string" },
+        "categoryId": { "type": "string" },
+        "categoryName": { "type": "string" },
+        "amount": { "type": "number" },
+        "method": { "type": "string" },
+        "desc": { "type": "string" }
+      },
+      "required": ["num", "date", "categoryId", "categoryName", "amount"]
+    },
+    "ExpenseCategory": {
+      "title": "ExpenseCategory",
+      "description": "Category for expenses",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" }
+      },
+      "required": ["id", "name"]
     },
     "Invoice": {
       "title": "Invoice",
@@ -54,16 +91,22 @@
         "date": { "type": "string" },
         "day": { "type": "string" },
         "customer": { "type": "string" },
+        "customerId": { "type": "string" },
+        "phone": { "type": "string" },
         "addr": { "type": "string" },
         "due": { "type": "string" },
         "status": { "type": "string", "enum": ["Unpaid", "Paid", "Partial"] },
         "method": { "type": "string" },
+        "transactionId": { "type": "string" },
         "lines": { "type": "array", "items": { "type": "object" } },
         "sub": { "type": "number" },
         "disc": { "type": "number" },
         "tax": { "type": "number" },
         "grand": { "type": "number" },
-        "paid": { "type": "number" }
+        "paid": { "type": "number" },
+        "balanceDue": { "type": "number" },
+        "labStatus": { "type": "string" },
+        "rx": { "$ref": "Prescription" }
       },
       "required": ["num", "date", "day", "customer", "status", "grand"]
     },
@@ -168,6 +211,18 @@
     "/users/{userId}/customers/{customerId}": {
       "schema": "Customer",
       "description": "Customer profiles for the user"
+    },
+    "/users/{userId}/customers/{customerId}/prescriptions/{rxId}": {
+      "schema": "Prescription",
+      "description": "Historical prescriptions for the customer"
+    },
+    "/users/{userId}/expenses/{expenseId}": {
+      "schema": "Expense",
+      "description": "Expense records for the user"
+    },
+    "/users/{userId}/expenseCategories/{categoryId}": {
+      "schema": "ExpenseCategory",
+      "description": "Expense categories for the user"
     }
   }
 }
