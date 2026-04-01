@@ -561,6 +561,7 @@ const App: React.FC = () => {
       r_bs: ['Balance Sheet', 'As at today'],
       r_cf: ['Cash Flow', 'Operating activities'],
       r_tb: ['Trial Balance', 'Debit / Credit summary'],
+      r_cat: ['Sales by Category', 'Sales breakdown by item category'],
       sett: ['Settings', 'Manage company profile and preferences'],
     };
     return meta[activePage] || ['Dashboard', ''];
@@ -596,6 +597,7 @@ const App: React.FC = () => {
       case 'r_bs': return <Reports type="bs" state={state} showNotification={showNotification} />;
       case 'r_cf': return <Reports type="cf" state={state} showNotification={showNotification} />;
       case 'r_tb': return <Reports type="tb" state={state} showNotification={showNotification} />;
+      case 'r_cat': return <Reports type="cat" state={state} showNotification={showNotification} />;
       case 'sett': return <Settings state={state} onSave={handleSaveSettings} onResetInventory={handleResetInventory} showNotification={showNotification} />;
       default: return <Dashboard state={state} onNavigate={handleNavigate} />;
     }

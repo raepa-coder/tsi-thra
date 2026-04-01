@@ -15,7 +15,8 @@ import {
   Settings,
   Tag,
   Menu,
-  X
+  X,
+  PieChart
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -47,6 +48,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activePage, onNavigate, settings }) =
     { id: 'r_bs', label: 'Balance Sheet', icon: <Scale size={18} />, section: 'Reports' },
     { id: 'r_cf', label: 'Cash Flow', icon: <Droplets size={18} />, section: 'Reports' },
     { id: 'r_tb', label: 'Trial Balance', icon: <ClipboardList size={18} />, section: 'Reports' },
+    { id: 'r_cat', label: 'Sales by Category', icon: <PieChart size={18} />, section: 'Reports' },
     { id: 'sett', label: 'Settings', icon: <Settings size={18} />, section: 'System' },
   ];
 

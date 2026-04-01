@@ -3,9 +3,10 @@ import { AppState, Nu } from '../utils';
 import { Printer, FileDown } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 interface ReportsProps {
-  type: 'pnl' | 'bs' | 'cf' | 'tb';
+  type: 'pnl' | 'bs' | 'cf' | 'tb' | 'cat';
   state: AppState;
   showNotification: (msg: string, type?: 'success' | 'error') => void;
 }
@@ -374,12 +375,125 @@ const Reports: React.FC<ReportsProps> = ({ type, state, showNotification }) => {
     );
   };
 
+  const renderCategoryReport = () => {
+    const categoryTotals: Record<string, { qty: number; net: number; tax: number; total: number }> = {};
+
+    // Helper to process lines
+    const processLines = (lines: any[]) => {
+      lines.forEach(line => {
+        if (!line.btc) return;
+        const item = state.items.find(i => i.btc === line.btc);
+        const category = item?.category || 'Uncategorized';
+        
+        if (!categoryTotals[category]) {
+          categoryTotals[category] = { qty: 0, net: 0, tax: 0, total: 0 };
+        }
+        
+        categoryTotals[category].qty += (line.qty || 0);
+        categoryTotals[category].net += (line.net || 0);
+        categoryTotals[category].tax += (line.tax || 0);
+        categoryTotals[category].total += (line.total || 0);
+      });
+    };
+
+    // Process Invoices
+    state.invoices.forEach(inv => {
+      if (inv.lines) processLines(inv.lines);
+    });
+
+    // Process POS Sales
+    state.posSales.forEach(pos => {
+      if (pos.lines) processLines(pos.lines);
+    });
+
+    const data = Object.entries(categoryTotals).map(([name, values]) => ({
+      name,
+      ...values
+    })).sort((a, b) => b.total - a.total);
+
+    const totalSales = data.reduce((sum, item) => sum + item.total, 0);
+    const COLORS = ['#f97316', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899', '#64748b'];
+
+    return (
+      <div className="max-w-4xl space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="card-container p-6">
+            {SectionHeader('Sales by Category')}
+            <div className="h-64 mt-4">
+              {data.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={data}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={80}
+                      paddingAngle={5}
+                      dataKey="total"
+                    >
+                      {data.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      formatter={(value: number) => Nu(value)}
+                      contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                    />
+                    <Legend verticalAlign="bottom" height={36} />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-full flex items-center justify-center text-slate-400 text-sm">
+                  No sales data available
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="card-container p-6">
+            {SectionHeader('Category Breakdown')}
+            <div className="mt-4 space-y-4">
+              {data.length > 0 ? data.map((cat, idx) => (
+                <div key={idx} className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-100 dark:border-slate-700">
+                  <div className="flex items-center gap-3">
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[idx % COLORS.length] }}></div>
+                    <div>
+                      <div className="font-bold text-slate-900 dark:text-white">{cat.name}</div>
+                      <div className="text-xs text-slate-500">{cat.qty} items sold</div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-bold text-slate-900 dark:text-white">{Nu(cat.total)}</div>
+                    <div className="text-xs text-slate-500">{((cat.total / totalSales) * 100).toFixed(1)}%</div>
+                  </div>
+                </div>
+              )) : (
+                <div className="text-center text-slate-400 text-sm py-8">
+                  No sales data available
+                </div>
+              )}
+              
+              {data.length > 0 && (
+                <div className="mt-6 pt-4 border-t-2 border-slate-100 dark:border-slate-700 flex justify-between items-center">
+                  <span className="font-extrabold text-slate-900 dark:text-white uppercase tracking-widest text-xs">Total Sales</span>
+                  <span className="font-extrabold text-orange-primary text-lg">{Nu(totalSales)}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderReport = () => {
     switch (type) {
       case 'pnl': return renderPNL();
       case 'bs': return renderBS();
       case 'cf': return renderCF();
       case 'tb': return renderTB();
+      case 'cat': return renderCategoryReport();
       default: return null;
     }
   };
