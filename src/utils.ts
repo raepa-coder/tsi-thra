@@ -59,7 +59,7 @@ export const initialAppState: AppState = {
     { id: '4', name: 'General' },
   ],
   settings: {
-    companyName: 'TSI-THRA BOOKKEEPING',
+    companyName: 'DAGA OPTICAL SHOP',
     address: 'Thimphu, Bhutan',
     phone: '+975-17XXXXXX',
     email: 'info@arunoptical.bt',

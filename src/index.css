@@ -4,7 +4,7 @@
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
   
-  --color-orange-primary: #f97316;
+  --color-orange-primary: #0ea5e9;
   --color-green-primary: #15803d;
   --color-green-secondary: #22c55e;
   --color-blue-primary: #2563eb;
@@ -46,17 +46,17 @@
   --color-red-900: #7f1d1d;
   --color-red-950: #450a0a;
 
-  --color-orange-50: #fff7ed;
-  --color-orange-100: #ffedd5;
-  --color-orange-200: #fed7aa;
-  --color-orange-300: #fdba74;
-  --color-orange-400: #fb923c;
-  --color-orange-500: #f97316;
-  --color-orange-600: #ea580c;
-  --color-orange-700: #c2410c;
-  --color-orange-800: #9a3412;
-  --color-orange-900: #7c2d12;
-  --color-orange-950: #431407;
+  --color-orange-50: #f0f9ff;
+  --color-orange-100: #e0f2fe;
+  --color-orange-200: #bae6fd;
+  --color-orange-300: #7dd3fc;
+  --color-orange-400: #38bdf8;
+  --color-orange-500: #0ea5e9;
+  --color-orange-600: #0284c7;
+  --color-orange-700: #0369a1;
+  --color-orange-800: #075985;
+  --color-orange-900: #0c4a6e;
+  --color-orange-950: #082f49;
 
   --color-green-50: #f0fdf4;
   --color-green-100: #dcfce7;
@@ -165,13 +165,13 @@
   }
 
   .input-field:focus {
-    border-color: rgba(249, 115, 22, 0.5);
-    box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.1);
+    border-color: rgba(14, 165, 233, 0.5);
+    box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.1);
   }
   
   .btn-primary {
     @apply bg-orange-primary text-white px-6 py-3 rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-orange-600 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed;
-    box-shadow: 0 10px 15px -3px rgba(249, 115, 22, 0.2);
+    box-shadow: 0 10px 15px -3px rgba(14, 165, 233, 0.2);
   }
   
   .btn-secondary {

@@ -228,7 +228,7 @@ const Reports: React.FC<ReportsProps> = ({ type, state, showNotification }) => {
             {RL('Total OPEX', py + exT, 'bg-[#fef2f2]')}
           </div>
           
-          <div className="mt-8 p-4 bg-[#fff7ed] border-2 border-[rgba(249,115,22,0.2)] rounded-xl flex justify-between items-center">
+          <div className="mt-8 p-4 bg-[#fff7ed] border-2 border-[rgba(14,165,233,0.2)] rounded-xl flex justify-between items-center">
             <span className="text-sm font-extrabold text-slate-900">Net Profit / (Loss)</span>
             <span className={`text-xl font-extrabold tracking-tight ${np >= 0 ? 'text-orange-primary' : 'text-red-600'}`}>{Nu(np)}</span>
           </div>

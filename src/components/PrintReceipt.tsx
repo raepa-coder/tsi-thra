@@ -272,7 +272,7 @@ const PrintReceipt: React.FC<PrintReceiptProps> = ({ record, type, settings, onC
                 )}
                 <div className="space-y-2">
                   <h1 className="text-3xl font-black text-orange-primary uppercase tracking-tighter leading-none">
-                    {settings.companyName || 'Tsi-Thra Shop'}
+                    {settings.companyName || 'DAGA OPTICAL SHOP Shop'}
                   </h1>
                   <div className="space-y-1">
                     <p className="text-sm font-bold text-slate-700">{settings.address}</p>

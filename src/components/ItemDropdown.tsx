@@ -54,7 +54,7 @@ const ItemDropdown: React.FC<ItemDropdownProps> = ({ items, onSelect, onClose, a
   return (
     <div 
       ref={dropdownRef}
-      className="fixed z-[9999] bg-white border-2 border-[rgba(249,115,22,0.3)] rounded-xl shadow-2xl flex flex-col overflow-hidden"
+      className="fixed z-[9999] bg-white border-2 border-[rgba(14,165,233,0.3)] rounded-xl shadow-2xl flex flex-col overflow-hidden"
       style={getPosition()}
     >
       <div className="p-3 border-b-2 border-slate-100 bg-[rgba(248,250,252,0.5)] flex items-center gap-3">

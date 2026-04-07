@@ -636,13 +636,13 @@ const App: React.FC = () => {
           </div>
           
           <div className="space-y-2">
-            <h1 className="text-3xl font-black text-slate-900 dark:text-slate-100 tracking-tight uppercase">Tsi-Thra</h1>
+            <h1 className="text-3xl font-black text-slate-900 dark:text-slate-100 tracking-tight uppercase">DAGA OPTICAL SHOP</h1>
             <p className="text-slate-500 dark:text-slate-400 font-bold text-sm uppercase tracking-widest">Bookkeeping System</p>
           </div>
 
           <div className="p-6 bg-slate-50 dark:bg-[rgba(30,41,59,0.5)] rounded-2xl border-2 border-slate-100 dark:border-slate-800 text-left">
             <p className="text-xs text-slate-500 dark:text-slate-400 font-bold leading-relaxed">
-              Welcome to TSI-THRA BOOKKEEPING. Please sign in with your Google account to access your shop's cloud database and sync your data across all devices.
+              Welcome to DAGA OPTICAL SHOP BOOKKEEPING. Please sign in with your Google account to access your shop's cloud database and sync your data across all devices.
             </p>
           </div>
 

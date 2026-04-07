@@ -12,7 +12,7 @@ const TopBar: React.FC<TopBarProps> = ({ title, subtitle, settings }) => {
   const user = auth.currentUser;
 
   return (
-    <div className="p-4 border-b border-[rgba(249,115,22,0.1)] flex items-center justify-between bg-slate-50 dark:bg-slate-950 relative overflow-hidden shrink-0 transition-colors duration-300 no-print">
+    <div className="p-4 border-b border-[rgba(14,165,233,0.1)] flex items-center justify-between bg-slate-50 dark:bg-slate-950 relative overflow-hidden shrink-0 transition-colors duration-300 no-print">
       <div className="weave-bg absolute inset-0 pointer-events-none opacity-50 dark:opacity-20"></div>
       
       <div className="relative z-10 flex items-center justify-between w-full gap-4">

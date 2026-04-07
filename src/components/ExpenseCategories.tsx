@@ -30,7 +30,7 @@ const ExpenseCategories: React.FC<ExpenseCategoriesProps> = ({ state, onSave, on
 
   return (
     <div className="max-w-2xl mx-auto space-y-8">
-      <form onSubmit={handleAdd} className="card-container p-6 flex gap-4 items-end bg-gradient-to-br from-slate-50 to-[rgba(255,247,237,0.3)] dark:from-slate-900 dark:to-[rgba(124,45,18,0.1)]">
+      <form onSubmit={handleAdd} className="card-container p-6 flex gap-4 items-end bg-gradient-to-br from-slate-50 to-[rgba(255,247,237,0.3)] dark:from-slate-900 dark:to-[rgba(12,74,110,0.1)]">
         <div className="flex-1 space-y-2">
           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
             <Tag size={12} /> New Category Name
@@ -45,7 +45,7 @@ const ExpenseCategories: React.FC<ExpenseCategoriesProps> = ({ state, onSave, on
         </div>
         <button 
           type="submit"
-          className="px-6 py-3 rounded-xl bg-orange-primary text-white font-extrabold uppercase tracking-widest text-[10px] flex items-center gap-2 hover:bg-orange-600 shadow-lg shadow-[rgba(249,115,22,0.2)] transition-all"
+          className="px-6 py-3 rounded-xl bg-orange-primary text-white font-extrabold uppercase tracking-widest text-[10px] flex items-center gap-2 hover:bg-orange-600 shadow-lg shadow-[rgba(14,165,233,0.2)] transition-all"
         >
           <Plus size={16} /> Add Category
         </button>

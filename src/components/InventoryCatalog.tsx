@@ -139,7 +139,7 @@ const InventoryCatalog: React.FC<InventoryCatalogProps> = ({ state, onAddItem, o
 
   const ItemForm = ({ item, onChange, onSave, onCancel, title }: any) => (
     <div className="fixed inset-0 bg-[rgba(15,23,42,0.4)] backdrop-blur-sm z-[200] flex items-center justify-center p-4 transition-all duration-300">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border-2 border-[rgba(249,115,22,0.2)]">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border-2 border-[rgba(14,165,233,0.2)]">
         <div className="px-6 py-4 border-b-2 border-slate-50 dark:border-slate-800 bg-[#f8fafc] dark:bg-[rgba(30,41,59,0.5)] flex items-center justify-between">
           <h3 className="text-sm font-extrabold text-slate-900 dark:text-slate-100 uppercase tracking-wider">{title}</h3>
           <button onClick={onCancel} className="text-slate-400 hover:text-red-500 transition-colors"><X size={20} /></button>
@@ -201,7 +201,7 @@ const InventoryCatalog: React.FC<InventoryCatalogProps> = ({ state, onAddItem, o
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 no-print">
-        <div className="flex items-center gap-3 bg-[#fff7ed] dark:bg-[rgba(124,45,18,0.1)] border-2 border-[rgba(249,115,22,0.2)] rounded-full px-4 py-1.5 w-fit">
+        <div className="flex items-center gap-3 bg-[#fff7ed] dark:bg-[rgba(12,74,110,0.1)] border-2 border-[rgba(249,115,22,0.2)] rounded-full px-4 py-1.5 w-fit">
           <span className="text-[11px] font-extrabold text-orange-primary dark:text-orange-primary uppercase tracking-widest">📦 Inventory Catalog</span>
           <span className="w-1 h-1 rounded-full bg-[rgba(249,115,22,0.3)]"></span>
           <span className="text-[11px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-widest">{state.items.length} Items in Catalog</span>

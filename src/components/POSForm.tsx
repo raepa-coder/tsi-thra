@@ -121,7 +121,7 @@ const POSForm: React.FC<POSFormProps> = ({ state, user, onSave, onCancel, initia
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3 bg-[rgba(249,115,22,0.1)] border-2 border-[rgba(249,115,22,0.2)] rounded-full px-4 py-1.5 w-fit">
+      <div className="flex items-center gap-3 bg-[rgba(14,165,233,0.1)] border-2 border-[rgba(249,115,22,0.2)] rounded-full px-4 py-1.5 w-fit">
         <span className="text-[11px] font-extrabold text-orange-primary uppercase tracking-widest">🏪 {initialData ? 'Edit POS Sale' : 'POS Sale'}</span>
         <span className="w-1 h-1 rounded-full bg-[rgba(249,115,22,0.3)]"></span>
         <span className="text-[11px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-widest">{initialData ? 'Editing' : 'Next'}: <strong>{nextNum}</strong></span>
@@ -142,7 +142,7 @@ const POSForm: React.FC<POSFormProps> = ({ state, user, onSave, onCancel, initia
         <div className="p-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="space-y-1">
             <label className="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Receipt #</label>
-            <input className="input-field bg-[#fff7ed] dark:bg-[rgba(124,45,18,0.1)] border-[rgba(249,115,22,0.2)] text-orange-primary" value={nextNum} readOnly />
+            <input className="input-field bg-[#fff7ed] dark:bg-[rgba(12,74,110,0.1)] border-[rgba(249,115,22,0.2)] text-orange-primary" value={nextNum} readOnly />
           </div>
           <div className="space-y-1">
             <label className="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Date</label>
@@ -242,7 +242,7 @@ const POSForm: React.FC<POSFormProps> = ({ state, user, onSave, onCancel, initia
               </div>
             </div>
             
-            <div className="w-full md:w-80 bg-gradient-to-br from-[#fff7ed] to-[rgba(255,237,213,0.3)] dark:from-[rgba(124,45,18,0.1)] dark:to-[rgba(154,52,18,0.05)] border-2 border-[rgba(249,115,22,0.1)] rounded-xl p-5 space-y-3">
+            <div className="w-full md:w-80 bg-gradient-to-br from-[#fff7ed] to-[rgba(255,237,213,0.3)] dark:from-[rgba(124,45,18,0.1)] dark:to-[rgba(7,89,133,0.05)] border-2 border-[rgba(249,115,22,0.1)] rounded-xl p-5 space-y-3">
               <div className="flex justify-between text-sm font-bold text-slate-500 dark:text-slate-400">
                 <span>Net Amount</span>
                 <span>{Nu(totals.net)}</span>

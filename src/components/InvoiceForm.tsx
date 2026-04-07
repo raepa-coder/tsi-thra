@@ -260,7 +260,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ state, user, onSave, onCancel
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-3 bg-[#fff7ed] border-2 border-[rgba(249,115,22,0.2)] rounded-full px-4 py-1.5 w-fit">
+        <div className="flex items-center gap-3 bg-[#fff7ed] border-2 border-[rgba(14,165,233,0.2)] rounded-full px-4 py-1.5 w-fit">
           <span className="text-[11px] font-extrabold text-orange-primary uppercase tracking-widest">🧾 {initialData ? 'Edit Invoice' : 'New Invoice'}</span>
           <span className="w-1 h-1 rounded-full bg-[rgba(249,115,22,0.3)]"></span>
           <span className="text-[11px] font-extrabold text-slate-500 uppercase tracking-widest">{initialData ? 'Editing' : 'Next'}: <strong>{nextNum}</strong></span>

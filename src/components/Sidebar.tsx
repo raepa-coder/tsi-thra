@@ -59,7 +59,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activePage, onNavigate, settings }) =
       {/* Mobile Menu Button */}
       <button 
         onClick={() => setIsOpen(!isOpen)}
-        className="md:hidden fixed top-4 right-4 z-[200] p-2 bg-white dark:bg-slate-800 rounded-lg shadow-md border border-[rgba(249,115,22,0.1)] text-orange-primary"
+        className="md:hidden fixed top-4 right-4 z-[200] p-2 bg-white dark:bg-slate-800 rounded-lg shadow-md border border-[rgba(14,165,233,0.1)] text-orange-primary"
       >
         {isOpen ? <X size={24} /> : <Menu size={24} />}
       </button>
@@ -96,7 +96,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activePage, onNavigate, settings }) =
               )}
             </div>
             <div>
-              <div className="text-lg font-extrabold text-orange-primary leading-tight tracking-tight dark:text-orange-primary uppercase">Tsi-Thra</div>
+              <div className="text-lg font-extrabold text-orange-primary leading-tight tracking-tight dark:text-orange-primary uppercase">DAGA OPTICAL SHOP</div>
               <div className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">Bookkeeping System</div>
             </div>
           </div>
@@ -132,7 +132,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activePage, onNavigate, settings }) =
           ))}
         </div>
 
-        <div className="m-3 p-3 rounded-xl bg-gradient-to-br from-[rgba(249,115,22,0.1)] to-[rgba(249,115,22,0.05)] border-2 border-[rgba(249,115,22,0.2)] text-center dark:from-[rgba(124,45,18,0.1)] dark:to-[rgba(154,52,18,0.05)] dark:border-[rgba(124,45,18,0.2)]">
+        <div className="m-3 p-3 rounded-xl bg-gradient-to-br from-[rgba(249,115,22,0.1)] to-[rgba(249,115,22,0.05)] border-2 border-[rgba(249,115,22,0.2)] text-center dark:from-[rgba(12,74,110,0.1)] dark:to-[rgba(7,89,133,0.05)] dark:border-[rgba(124,45,18,0.2)]">
           <div className="text-xs font-extrabold text-orange-primary dark:text-orange-primary">🐉 Made in Bhutan</div>
           <div className="text-[9px] text-slate-500 dark:text-slate-400 font-bold mt-1 leading-relaxed">
             Optical Shop Inventory System

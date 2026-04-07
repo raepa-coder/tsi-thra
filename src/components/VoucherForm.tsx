@@ -37,7 +37,7 @@ const VoucherForm: React.FC<VoucherFormProps> = ({ type, state, onSave, onCancel
   return (
     <div className="space-y-6">
       <div className={`flex items-center gap-3 border-2 rounded-full px-4 py-1.5 w-fit ${
-        type === 'Receipt' ? 'bg-[#fff7ed] border-[rgba(249,115,22,0.2)]' : 'bg-[#fef2f2] border-[rgba(220,38,38,0.2)]'
+        type === 'Receipt' ? 'bg-[#fff7ed] border-[rgba(14,165,233,0.2)]' : 'bg-[#fef2f2] border-[rgba(220,38,38,0.2)]'
       }`}>
         <span className={`text-[11px] font-extrabold uppercase tracking-widest ${
           type === 'Receipt' ? 'text-orange-primary' : 'text-red-600'

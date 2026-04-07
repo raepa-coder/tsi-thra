@@ -185,7 +185,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ state, onSave, onAddCategory,
           </button>
           <button 
             type="submit"
-            className="px-8 py-3 rounded-xl bg-orange-primary text-white font-extrabold uppercase tracking-widest text-[10px] flex items-center gap-2 hover:bg-orange-600 shadow-lg shadow-[rgba(249,115,22,0.2)] transition-all"
+            className="px-8 py-3 rounded-xl bg-orange-primary text-white font-extrabold uppercase tracking-widest text-[10px] flex items-center gap-2 hover:bg-orange-600 shadow-lg shadow-[rgba(14,165,233,0.2)] transition-all"
           >
             <Save size={16} /> Save Expense
           </button>

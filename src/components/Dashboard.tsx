@@ -58,8 +58,8 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onNavigate }) => {
     <div className="space-y-6">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {kpis.map((kpi, idx) => (
-          <div key={idx} className="card-container p-4 relative overflow-hidden bg-gradient-to-br from-slate-50 to-[rgba(255,247,237,0.3)] dark:from-slate-900 dark:to-[rgba(124,45,18,0.1)]">
-            <div className="absolute -right-2 -top-2 w-12 h-12 rounded-full bg-[rgba(249,115,22,0.05)] dark:bg-[rgba(249,115,22,0.1)]"></div>
+          <div key={idx} className="card-container p-4 relative overflow-hidden bg-gradient-to-br from-slate-50 to-[rgba(255,247,237,0.3)] dark:from-slate-900 dark:to-[rgba(12,74,110,0.1)]">
+            <div className="absolute -right-2 -top-2 w-12 h-12 rounded-full bg-[rgba(14,165,233,0.05)] dark:bg-[rgba(249,115,22,0.1)]"></div>
             <div className="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1">{kpi.label}</div>
             <div className={`text-xl font-extrabold tracking-tight ${kpi.color}`}>{kpi.val}</div>
             <div className="mt-2 text-slate-300 dark:text-slate-600">{kpi.icon}</div>
