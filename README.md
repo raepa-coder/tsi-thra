@@ -16,5 +16,7 @@ View your app in AI Studio: https://ai.studio/apps/828a1d98-364a-4642-90d2-21a46
 1. Install dependencies:
    `npm install`
 2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+3. Run the app with Netlify local emulation:
+   `/opt/buildhome/node-deps/node_modules/.bin/netlify dev`
+4. Open:
+   `http://localhost:8888`
