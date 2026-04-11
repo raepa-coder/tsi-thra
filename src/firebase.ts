@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signOut, onAuthStateChanged, User } from 'firebase/auth';
 import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, onSnapshot, query, where, getDocs, getDocFromServer } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
 
@@ -62,8 +62,20 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
 
 export const signIn = async () => {
   try {
-    const result = await signInWithPopup(auth, googleProvider);
-    return result.user;
+    // Check if we are running inside an iframe (like the AI Studio preview)
+    const isInIframe = window.self !== window.top;
+    
+    if (isInIframe) {
+      // Use popup for iframes to avoid cross-origin redirect issues
+      const result = await signInWithPopup(auth, googleProvider);
+      return result.user;
+    } else {
+      // Use redirect for standalone apps (Netlify/PWA) to avoid popup blockers
+      await signInWithRedirect(auth, googleProvider);
+      // signInWithRedirect doesn't return the user immediately, it redirects the page.
+      // The user will be picked up by onAuthStateChanged when they return.
+      return null; 
+    }
   } catch (error) {
     console.error('Error signing in:', error);
     throw error;

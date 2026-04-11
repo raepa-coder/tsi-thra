@@ -39,6 +39,7 @@ import { ITEMS } from './data/btc-items';
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
   const [state, setState] = useState<AppState>(initialAppState);
   const [activePage, setActivePage] = useState('dash');
   const [notification, setNotification] = useState<{ msg: string, type: 'success' | 'error' } | null>(null);
@@ -647,13 +648,36 @@ const App: React.FC = () => {
           </div>
 
           <button 
-            onClick={() => signIn()}
+            onClick={async () => {
+              setLoginError(null);
+              try {
+                await signIn();
+              } catch (err: any) {
+                console.error("Login failed:", err);
+                if (err.code === 'auth/unauthorized-domain') {
+                  setLoginError("This domain is not authorized. Please add your Netlify URL to Firebase Authentication -> Settings -> Authorized Domains.");
+                } else if (err.code === 'auth/popup-blocked') {
+                  setLoginError("Popup was blocked by your browser. Please allow popups for this site.");
+                } else if (err.code === 'auth/popup-closed-by-user') {
+                  setLoginError("Sign-in popup was closed before completing.");
+                } else {
+                  setLoginError(err.message || "An error occurred during sign in.");
+                }
+              }
+            }}
             className="w-full btn-primary flex items-center justify-center gap-3 py-4 text-lg"
           >
             <LogIn size={20} /> Sign in with Google
           </button>
 
-          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">
+          {loginError && (
+            <div className="mt-4 p-3 bg-red-50 border border-red-200 text-red-600 text-xs font-bold rounded-lg text-left">
+              <AlertTriangle size={14} className="inline mr-1 mb-0.5" />
+              {loginError}
+            </div>
+          )}
+
+          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter mt-4">
             Secure Cloud Storage · ARUN OPTICAL Inventory
           </p>
         </motion.div>
